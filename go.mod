@@ -1,4 +1,4 @@
-module goutil
+module github.com/decadestory/goutil
 
 go 1.18
 
