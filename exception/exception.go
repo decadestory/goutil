@@ -1,9 +1,11 @@
-package goutil
+package exception
 
 import (
 	"log"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/decadestory/goutil/br"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -34,7 +36,7 @@ func (e *Error) Recover(c *gin.Context) {
 			log.Printf("panic: %v\n", r)
 			debug.PrintStack()
 			//封装通用json返回
-			res := Br{Status: -2, ExtData: 0, Data: nil, Msg: Errors.ErrorToString(r)}
+			res := br.Br{Status: -2, ExtData: 0, Data: nil, Msg: Errors.ErrorToString(r)}
 			c.JSON(http.StatusOK, res)
 			//终止后续接口调用，不加的话recover到异常后，还会继续执行接口里后续代码
 			c.Abort()
@@ -59,5 +61,12 @@ func (e *Error) TranRecover(tx *gorm.DB) {
 	if r := recover(); r != nil {
 		tx.Rollback()
 		panic(r)
+	}
+}
+
+// 事务中recover错误，抛出异常
+func (e *Error) DeferRecover() {
+	if r := recover(); r != nil {
+		log.Println(r)
 	}
 }

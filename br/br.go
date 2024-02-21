@@ -1,4 +1,4 @@
-package goutil
+package br
 
 import "github.com/gin-gonic/gin"
 
