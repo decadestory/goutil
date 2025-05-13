@@ -53,7 +53,7 @@ func init() {
 	}
 
 	name := conf.Configs.Viper().Get("auth.name")
-	if name != "" {
+	if name != nil {
 		Auths.Name = name.(string)
 	}
 }
@@ -74,7 +74,7 @@ func (a *Auth) AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	token := c.GetHeader("token")
+	token := c.GetHeader(a.Name)
 	if token == "" {
 		br.Brs.Okc(c, "登录过期，请重新登录", 403)
 		c.Abort()
