@@ -1,30 +1,50 @@
 package conf
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"time"
 
 	"github.com/Unknwon/goconfig"
+	"github.com/decadestory/goutil/br"
 	"github.com/decadestory/goutil/exception"
+	"github.com/decadestory/goutil/misc"
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Env string
+	Env string // 环境名称
+	Svc string // 服务名称
+	Cch string // 配置中心地址IP:端口
 }
 
-var Configs = &Config{Env: ""}
+var Configs = &Config{Env: "", Svc: "", Cch: ""}
 
 func init() {
 
 	flag.StringVar(&Configs.Env, "env", "", "-env [环境名称] 默认无")
+	flag.StringVar(&Configs.Svc, "svc", "", "-svc [服务名称] 默认无")
+	flag.StringVar(&Configs.Cch, "cch", "", "-cch [配置中心IP] 默认无")
 	flag.Parse()
 
 	confile := "conf"
 
 	if Configs.Env != "" {
 		confile += "_" + Configs.Env
+	}
+
+	// 如果有配置中心则走配置中心
+	if Configs.Env != "" && Configs.Svc != "" && Configs.Cch != "" {
+		createConfigFile(Configs)
 	}
 
 	viper.SetConfigType("toml")
@@ -35,6 +55,62 @@ func init() {
 }
 
 func (cfg *Config) Init() {}
+
+func createConfigFile(c *Config) {
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+			debug.PrintStack()
+		}
+	}()
+
+	params := map[string]string{
+		"env":      c.Env,
+		"app":      c.Svc,
+		"clientIp": misc.GetIp(),
+	}
+
+	pstr, err := json.Marshal(params)
+	exception.Errors.CheckErr(err)
+	var httpClient = &http.Client{Timeout: time.Second * 3}
+	resp, err := httpClient.Post(c.Cch+"/liuer/api/v1/getByEnvSvc", "application/json", bytes.NewBuffer(pstr))
+	exception.Errors.CheckErr(err)
+	defer resp.Body.Close()
+
+	// 读取响应体
+	body, err := io.ReadAll(resp.Body)
+	exception.Errors.CheckErr(err)
+	fmt.Println(string(body))
+
+	var res br.Br
+	err = json.Unmarshal(body, &res)
+	exception.Errors.CheckErr(err)
+	if res.Status != 1 {
+		exception.Errors.CheckErr(errors.New(res.Msg))
+	}
+	resultData := res.Data.(map[string]interface{})
+	configData := resultData["config"].(string)
+
+	// 写入配置文件
+	cpath := Configs.GetWorkDir() + "/conf/conf_" + c.Env + ".toml"
+
+	if _, err := os.Stat(cpath); err == nil {
+		//删除配置文件
+		os.Remove(cpath)
+	}
+
+	f, err := os.Create(cpath)
+	exception.Errors.CheckErr(err)
+	defer f.Close()
+	_, err = f.Write([]byte(configData))
+	exception.Errors.CheckErr(err)
+}
+
+func (cfg *Config) FlushConfig(c *gin.Context) {
+	createConfigFile(cfg)
+	br.Brs.Oks(c, "刷新配置成功")
+}
 
 func (cfg *Config) GetWorkDir() string {
 	workDir := os.Getenv("DOCKER_GO_WORK_DIR")

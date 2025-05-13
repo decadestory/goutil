@@ -67,6 +67,7 @@ func (e *Error) TranRecover(tx *gorm.DB) {
 // 事务中recover错误，抛出异常
 func (e *Error) DeferRecover() {
 	if r := recover(); r != nil {
+		debug.PrintStack()
 		log.Println(r)
 	}
 }
