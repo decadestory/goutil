@@ -14,5 +14,9 @@ func init() {
 		c.JSON(200, "hello")
 	})
 
+	Router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, "OK")
+	})
+
 	Router.GET("/flushConfig", conf.Configs.FlushConfig)
 }
