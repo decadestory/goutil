@@ -16,7 +16,7 @@ type Micro struct {
 	Config *api.KVPairs
 }
 
-var MicroApi = Micro{}
+var Micros = Micro{}
 
 // 注册服务
 func (m *Micro) RegisterService() {
