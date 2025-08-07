@@ -3,7 +3,6 @@ package micro
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/decadestory/goutil/conf"
 	"github.com/decadestory/goutil/exception"
@@ -18,22 +17,15 @@ type Micro struct {
 
 var Micros = Micro{}
 
+func init() {
+	Micros.RegisterService()
+}
+
 // 注册服务
 func (m *Micro) RegisterService() {
 	rcUrl := conf.Configs.GetString("register.center.url")
-	if rcUrl == "" {
-		panic("Register center URL is not configured")
-	}
-
 	svcName := conf.Configs.GetString("service.name")
-	if svcName == "" {
-		panic("Service name is not configured")
-	}
-
 	svcPort := conf.Configs.GetInt("service.port")
-	if svcPort == 0 {
-		panic("Service port is not configured")
-	}
 
 	// 注册到 Consul
 	consulConfig := api.DefaultConfig()
@@ -58,7 +50,7 @@ func (m *Micro) RegisterService() {
 	err = m.Client.Agent().ServiceRegister(reg)
 	exception.Errors.Panic(err)
 
-	log.Println("Service registered with Consul")
+	fmt.Println("Service registered successfully:", reg.ID)
 }
 
 // 获取配置
