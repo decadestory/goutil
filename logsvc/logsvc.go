@@ -5,12 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/decadestory/goutil/auth"
+	"github.com/decadestory/goutil/br"
 	"github.com/decadestory/goutil/conf"
 	"github.com/decadestory/goutil/exception"
 	"github.com/decadestory/goutil/logger"
@@ -291,6 +294,23 @@ func (log *LogSvc) LogApiMidware(c *gin.Context) {
 	c.Next()
 
 	log.LogApi(c, time.Since(st).Milliseconds(), string(reqData), writer.body.String())
+}
+
+// Gin中间件，全局捕获异常
+func (log *LogSvc) Recover(c *gin.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			debug.PrintStack()
+			//封装通用json返回
+			res := br.Br{Status: -2, ExtData: 0, Data: nil, Msg: exception.Errors.ErrorToString(r)}
+			log.Fatal(c, r)
+			c.JSON(http.StatusOK, res)
+			//终止后续接口调用，不加的话recover到异常后，还会继续执行接口里后续代码
+			c.Abort()
+		}
+	}()
+	//加载完 defer recover，继续后续接口调用
+	c.Next()
 }
 
 func (log *LogSvc) kafkaProducer(msgTxt string) {
