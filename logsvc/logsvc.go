@@ -12,6 +12,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/decadestory/goutil/auth"
 	"github.com/decadestory/goutil/conf"
+	"github.com/decadestory/goutil/exception"
 	"github.com/decadestory/goutil/logger"
 	"github.com/decadestory/goutil/misc"
 	"github.com/gin-gonic/gin"
@@ -20,13 +21,14 @@ import (
 
 var serviceId string
 var client sarama.SyncProducer
+var sip string
 
 const maxLogSize = 2 * 1024 * 1024      // 只保留前 2MB
 const truncatedMark = "... [TRUNCATED]" // 只保留前 2MB
 
 type LogSvc struct{}
 
-var LoggerSvc = LogSvc{}
+var LogSvcs = LogSvc{}
 
 // 自定义 ResponseWriter，实现 gin.ResponseWriter 接口
 type customResponseWriter struct {
@@ -50,6 +52,7 @@ func (w *customResponseWriter) Write(data []byte) (int, error) {
 func init() {
 	var host string = conf.Configs.GetString("kafka.log.host")
 	serviceId = conf.Configs.GetString("service.name")
+	sip = misc.GetIp()
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.NoResponse
 	config.Producer.Partitioner = sarama.NewHashPartitioner
@@ -58,136 +61,213 @@ func init() {
 	config.Producer.Timeout = time.Second * 1
 	config.Producer.Return.Successes = true
 	newClient, err := sarama.NewSyncProducer([]string{host}, config)
-	logger.Logger.Error(err)
+	logger.Logs.Error(err)
 	client = newClient
 }
 
-func KafkaProducer(msgTxt string) {
-	msg := &sarama.ProducerMessage{}
-	msg.Topic = "sme-logger"
-	msg.Value = sarama.StringEncoder(msgTxt)
-	_, _, err := client.SendMessage(msg)
-	logger.Logger.Error(err)
-}
+// Infos 不需要传上下文
+// args[0] LogExtTxt
+// args[1] Duration
+func (log *LogSvc) Infos(msg string, args ...any) {
 
-// Info args[0] LogExtTxt,args[1] Duration
-func Info(msg string, args ...interface{}) {
-	var ext string = ""
-	var dur int64 = 0
-	if len(args) > 0 {
-		ext = args[0].(string)
-	}
-	if len(args) > 1 {
-		dur = args[1].(int64)
-	}
+	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
+	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
 
-	log := misc.Logger{
+	item := misc.Logger{
 		ServiceId:  serviceId,
-		RequestId:  "",
-		Ip:         misc.GetIp(),
-		Path:       getStack(),
+		Path:       log.getStack(),
 		LogType:    "debug",
 		LogLevel:   1,
-		UserId:     "",
-		Account:    "",
 		LogTxt:     msg,
 		LogExtTxt:  ext,
 		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
-	m, _ := json.Marshal(log)
-	KafkaProducer(string(m))
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
 }
 
-// Debug args[0] LogExtTxt,args[1] Duration
-func Debug(msg string, args ...interface{}) {
-	var ext string = ""
-	var dur int64 = 0
-	if len(args) > 0 {
-		ext = args[0].(string)
-	}
-	if len(args) > 1 {
-		dur = args[1].(int64)
-	}
-	log := misc.Logger{
+// Info
+// args[0] LogExtTxt
+// args[1] Duration
+func (log *LogSvc) Bus(c *gin.Context, msg string, args ...any) {
+
+	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
+	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
+
+	item := misc.Logger{
 		ServiceId:  serviceId,
-		RequestId:  "",
-		Ip:         misc.GetIp(),
-		Path:       getStack(),
+		Ip:         sip,
+		Path:       log.getStack(),
+		LogType:    "bus",
+		LogLevel:   1,
+		LogTxt:     msg,
+		LogExtTxt:  ext,
+		Duration:   dur,
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
+// Info
+// args[0] LogExtTxt
+// args[1] Duration
+func (log *LogSvc) Info(c *gin.Context, msg string, args ...any) {
+
+	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
+	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
+
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
+		Path:       log.getStack(),
+		LogType:    "debug",
+		LogLevel:   1,
+		LogTxt:     msg,
+		LogExtTxt:  ext,
+		Duration:   dur,
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
+// Debug args[0]
+// LogExtTxt,
+// args[1] Duration
+func (log *LogSvc) Debug(c *gin.Context, msg string, args ...any) {
+
+	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
+	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
+
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
+		Path:       log.getStack(),
 		LogType:    "debug",
 		LogLevel:   2,
-		UserId:     "",
-		Account:    "",
 		LogTxt:     msg,
 		LogExtTxt:  ext,
 		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
-	m, _ := json.Marshal(log)
-	KafkaProducer(string(m))
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
 }
 
-// Error args[0] LogExtTxt,args[1] Duration
-func Error(msg string, args ...interface{}) {
-	var ext string = ""
-	var dur int64 = 0
-	if len(args) > 0 {
-		ext = args[0].(string)
-	}
-	if len(args) > 1 {
-		dur = args[1].(int64)
-	}
-	log := misc.Logger{
+// Debug args[0]
+// LogExtTxt,
+// args[1] Duration
+func (log *LogSvc) Warn(c *gin.Context, msg string, args ...any) {
+
+	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
+	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
+
+	item := misc.Logger{
 		ServiceId:  serviceId,
-		RequestId:  "",
-		Ip:         misc.GetIp(),
-		Path:       getStack(),
+		Ip:         sip,
+		Path:       log.getStack(),
+		LogType:    "debug",
+		LogLevel:   3,
+		LogTxt:     msg,
+		LogExtTxt:  ext,
+		Duration:   dur,
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
+func (log *LogSvc) Error(c *gin.Context, err error) {
+	buf := make([]byte, 1024)
+	n := runtime.Stack(buf, false)
+
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
+		Path:       log.getStack(),
 		LogType:    "exception",
 		LogLevel:   4,
-		UserId:     "",
-		Account:    "",
-		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
+		LogTxt:     exception.Errors.ErrorToString(err),
+		LogExtTxt:  string(buf[:n]),
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
-	m, _ := json.Marshal(log)
-	KafkaProducer(string(m))
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
 }
 
-// Error args[0] LogExtTxt,args[1] Duration
-func LogApi(c *gin.Context, reqId string, dur int64, reqData, repData string) {
-	log := misc.Logger{
+func (log *LogSvc) Fatal(c *gin.Context, r any) {
+
+	buf := make([]byte, 1024)
+	n := runtime.Stack(buf, false)
+
+	item := misc.Logger{
 		ServiceId:  serviceId,
-		RequestId:  reqId,
-		Ip:         misc.GetIp(),
+		Ip:         sip,
+		Path:       log.getStack(),
+		LogType:    "exception",
+		LogLevel:   5,
+		LogTxt:     exception.Errors.ErrorToString(r),
+		LogExtTxt:  string(buf[:n]),
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
+func (log *LogSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
 		Path:       c.FullPath(),
 		LogType:    "api",
 		LogLevel:   1,
-		UserId:     "",
-		Account:    "",
 		LogTxt:     reqData,
 		LogExtTxt:  repData,
 		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
 
-	curUser := auth.AuthRds.GetCurUser(c)
-	if curUser.Id != 0 {
-		log.UserId = strconv.Itoa(curUser.Id)
-		log.Account = curUser.Account
-	}
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
 
-	m, _ := json.Marshal(log)
-	KafkaProducer(string(m))
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
 }
 
-func LogApiMidware(c *gin.Context) {
+func (log *LogSvc) LogApiMidware(c *gin.Context) {
 
 	reqId := c.GetHeader("requestId")
 	if reqId == "" {
 		reqId, _ = uuid.GenerateUUID()
 	}
+	c.Set("requestId", reqId)
 
 	st := time.Now()
 	var reqData []byte
@@ -210,10 +290,18 @@ func LogApiMidware(c *gin.Context) {
 	c.Writer = writer
 	c.Next()
 
-	LogApi(c, reqId, time.Since(st).Milliseconds(), string(reqData), writer.body.String())
+	log.LogApi(c, time.Since(st).Milliseconds(), string(reqData), writer.body.String())
 }
 
-func getStack() (funcs string) {
+func (log *LogSvc) kafkaProducer(msgTxt string) {
+	msg := &sarama.ProducerMessage{}
+	msg.Topic = "sme-logger"
+	msg.Value = sarama.StringEncoder(msgTxt)
+	_, _, err := client.SendMessage(msg)
+	logger.Logs.Error(err)
+}
+
+func (log *LogSvc) getStack() (funcs string) {
 	// 获取调用链路径信息
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(0, pc)
@@ -228,4 +316,23 @@ func getStack() (funcs string) {
 		}
 	}
 	return
+}
+
+func (log *LogSvc) setReqId(c *gin.Context, item *misc.Logger) {
+
+	reqId, ok := c.Get("requestId")
+	if !ok {
+		item.RequestId, _ = uuid.GenerateUUID()
+		c.Set("requestId", reqId)
+	}
+
+	item.RequestId = reqId.(string)
+}
+
+func (log *LogSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
+	curUser := auth.AuthRds.GetCurUser(c)
+	if curUser.Id != 0 {
+		item.UserId = strconv.Itoa(curUser.Id)
+		item.Account = curUser.Account
+	}
 }

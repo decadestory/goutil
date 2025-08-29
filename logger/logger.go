@@ -13,7 +13,7 @@ type Log struct{}
 var logInfo = logrus.New()
 var logError = logrus.New()
 
-var Logger = Log{}
+var Logs = Log{}
 
 func init() {
 
