@@ -3,6 +3,7 @@ package misc
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 func GetIp() string {
@@ -42,4 +43,14 @@ func Ternary[T any](cond bool, trueVal, falseVal T) T {
 		return trueVal
 	}
 	return falseVal
+}
+
+func IsItemLike(items []string, item string) bool {
+	for _, eachItem := range items {
+		if strings.Contains(item, eachItem) {
+			return true
+		}
+	}
+
+	return false
 }

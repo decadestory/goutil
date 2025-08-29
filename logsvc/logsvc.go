@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/decadestory/goutil/auth"
 	"github.com/decadestory/goutil/conf"
 	"github.com/decadestory/goutil/logger"
 	"github.com/decadestory/goutil/misc"
@@ -155,7 +157,6 @@ func Error(msg string, args ...interface{}) {
 
 // Error args[0] LogExtTxt,args[1] Duration
 func LogApi(c *gin.Context, reqId string, dur int64, reqData, repData string) {
-
 	log := misc.Logger{
 		ServiceId:  serviceId,
 		RequestId:  reqId,
@@ -170,6 +171,13 @@ func LogApi(c *gin.Context, reqId string, dur int64, reqData, repData string) {
 		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
+
+	curUser := auth.Auths.GetCurUser(c)
+	if curUser.UserId != 0 {
+		log.UserId = strconv.Itoa(curUser.UserId)
+		log.Account = curUser.UserName
+	}
+
 	m, _ := json.Marshal(log)
 	KafkaProducer(string(m))
 }
@@ -181,23 +189,19 @@ func LogApiMidware(c *gin.Context) {
 		reqId, _ = uuid.GenerateUUID()
 	}
 
-	// 检查 Content-Length，如果大于 2M (2097152 bytes) 则不读取 body
 	st := time.Now()
 	var reqData []byte
 
-	limReader := io.LimitReader(c.Request.Body, maxLogSize+1) // +1 用于判断是否超长
-	raw, _ := io.ReadAll(limReader)
-	isOverLength := len(raw) > maxLogSize
+	body, _ := io.ReadAll(c.Request.Body)
 
-	switch isOverLength {
-	case true:
+	if len(body) > maxLogSize {
 		keep := misc.Ternary(maxLogSize-len(truncatedMark) > 0, maxLogSize-len(truncatedMark), 0)
-		reqData = append(raw[:keep], []byte(truncatedMark)...)
-	default:
-		body, _ := io.ReadAll(c.Request.Body)
+		reqData = append(body[:keep], []byte(truncatedMark)...)
+	} else {
 		reqData = body
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // 将 Body 内容重新写回 Request.Body，以便后续处理程序可以读取 Body
 	}
+
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	writer := &customResponseWriter{
 		ResponseWriter: c.Writer,

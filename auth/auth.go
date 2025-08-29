@@ -1,12 +1,12 @@
 package auth
 
 import (
-	"strings"
 	"time"
 
 	"github.com/decadestory/goutil/br"
 	"github.com/decadestory/goutil/conf"
 	"github.com/decadestory/goutil/exception"
+	"github.com/decadestory/goutil/misc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 )
@@ -70,7 +70,7 @@ func (a *Auth) GenerateToken(claims *UserClaims) string {
 func (a *Auth) AuthMiddleware(c *gin.Context) {
 
 	//过滤是否验证token
-	if isItemLike(a.Ignore, c.Request.RequestURI) {
+	if misc.IsItemLike(a.Ignore, c.Request.RequestURI) {
 		return
 	}
 
@@ -110,14 +110,4 @@ func (a *Auth) GetCurUser(c *gin.Context) *UserClaims {
 		return &uc
 	}
 	return claims.(*UserClaims)
-}
-
-func isItemLike(items []string, item string) bool {
-	for _, eachItem := range items {
-		if strings.Contains(item, eachItem) {
-			return true
-		}
-	}
-
-	return false
 }

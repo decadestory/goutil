@@ -41,3 +41,18 @@ type Logger struct {
 	Duration   int64  `json:"duration"`
 	CreateTime string `json:"createTime"`
 }
+
+type LoginResult struct {
+	// 用户ID
+	Id int `json:"id"`
+	// 用户名
+	UserName string `json:"userName"`
+	// 账号
+	Account string `json:"account"`
+	// 手机号
+	Phone string `json:"phone"`
+	// 邮箱
+	EMail string `json:"email"`
+	// Token
+	Token string `json:"token"`
+}
