@@ -172,10 +172,10 @@ func LogApi(c *gin.Context, reqId string, dur int64, reqData, repData string) {
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
 	}
 
-	curUser := auth.Auths.GetCurUser(c)
-	if curUser.UserId != 0 {
-		log.UserId = strconv.Itoa(curUser.UserId)
-		log.Account = curUser.UserName
+	curUser := auth.AuthRds.GetCurUser(c)
+	if curUser.Id != 0 {
+		log.UserId = strconv.Itoa(curUser.Id)
+		log.Account = curUser.Account
 	}
 
 	m, _ := json.Marshal(log)
