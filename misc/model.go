@@ -26,3 +26,18 @@ type BaseDtoModel struct {
 	EditTimeStr string `gorm:"-" json:"editTimeStr"`
 	IsValidStr  string `gorm:"-" json:"isValidStr"`
 }
+
+type Logger struct {
+	RequestId  string `json:"requestId"`
+	ServiceId  string `json:"serviceId"`
+	Ip         string `json:"ip"`
+	Path       string `json:"path"`
+	LogType    string `json:"logType"`
+	LogLevel   int    `json:"logLevel"`
+	UserId     string `json:"userId"`
+	Account    string `json:"account"`
+	LogTxt     string `json:"logTxt"`
+	LogExtTxt  string `json:"logExtTxt"`
+	Duration   int64  `json:"duration"`
+	CreateTime string `json:"createTime"`
+}
