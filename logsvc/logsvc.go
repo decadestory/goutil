@@ -57,9 +57,10 @@ func init() {
 	serviceId = conf.Configs.GetString("service.name")
 	sip = misc.GetIp()
 	config := sarama.NewConfig()
+	config.Producer.MaxMessageBytes = 2 * 1024 * 1024 //2M
 	config.Producer.RequiredAcks = sarama.NoResponse
 	config.Producer.Partitioner = sarama.NewHashPartitioner
-	config.Producer.Retry.Max = 0
+	config.Producer.Retry.Max = 1
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Timeout = time.Second * 1
 	config.Producer.Return.Successes = true
