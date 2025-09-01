@@ -65,7 +65,9 @@ func init() {
 	config.Producer.Timeout = time.Second * 1
 	config.Producer.Return.Successes = true
 	newClient, err := sarama.NewSyncProducer([]string{host}, config)
-	logger.Logs.Error(err)
+	if err != nil {
+		logger.Logs.Error(err)
+	}
 	client = newClient
 }
 
@@ -319,7 +321,9 @@ func (log *LogSvc) kafkaProducer(msgTxt string) {
 	msg.Topic = "sme-logger"
 	msg.Value = sarama.StringEncoder(msgTxt)
 	_, _, err := client.SendMessage(msg)
-	logger.Logs.Error(err)
+	if err != nil {
+		logger.Logs.Error(err)
+	}
 }
 
 func (log *LogSvc) getStack() (funcs string) {
