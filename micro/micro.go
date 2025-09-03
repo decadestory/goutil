@@ -1,7 +1,6 @@
 package micro
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/decadestory/goutil/conf"
@@ -51,33 +50,6 @@ func (m *Micro) RegisterService() {
 	exception.Errors.Panic(err)
 
 	fmt.Println("Service registered successfully:", reg.ID)
-}
-
-// 获取配置
-func (m *Micro) CC() *api.KV {
-	kv := m.Client.KV()
-	return kv
-}
-
-func (m *Micro) CStr(key string) string {
-	kv := m.Client.KV()
-	pair, _, _ := kv.Get(key, nil)
-	return string(pair.Value)
-}
-
-// ["192.168.1.10", "192.168.1.11", "192.168.1.12"]
-func (m *Micro) CStrArr(key string) []string {
-	kv := m.Client.KV()
-	pair, _, _ := kv.Get(key, nil)
-	var arr []string
-	json.Unmarshal(pair.Value, &arr)
-	return arr
-}
-
-func (m *Micro) CSvcCache(key_prefix string) {
-	kv := m.Client.KV()
-	pairs, _, _ := kv.List(key_prefix, nil)
-	m.Config = &pairs
 }
 
 //调用服务

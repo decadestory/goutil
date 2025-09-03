@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/LinkinStars/go-scaffold/pkg/cryptor"
 )
 
 func GetIp() string {
@@ -53,4 +55,33 @@ func IsItemLike(items []string, item string) bool {
 	}
 
 	return false
+}
+
+// 用于前端加密解密
+//
+//	function aesEncrypt(data) {
+//		var key = 'd8eab717abeca26cf5d0af2e216fa9f4'; // 16进制字符串
+//		if (key.length > 32) {
+//			key = key.slice(0, 32);
+//		}
+//		var cypherKey = CryptoJS.enc.Utf8.parse(key);
+//		CryptoJS.pad.ZeroPadding.pad(cypherKey, 4);
+//			var iv = CryptoJS.SHA256(key).toString();
+//			var cfg = { iv: CryptoJS.enc.Utf8.parse(iv) };
+//			return CryptoJS.AES.encrypt(data, cypherKey, cfg).toString();
+//		}
+//
+// console.log(aesEncrypt('123456'));
+func Decrypt(str string) string {
+
+	res := ""
+	defer func() {
+		if err := recover(); err != nil {
+			str = ""
+		}
+	}()
+
+	key := "d8eab717abeca26cf5d0af2e216fa9f4"
+	res = cryptor.AesSimpleDecrypt(str, key)
+	return res
 }

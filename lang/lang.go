@@ -21,9 +21,9 @@ var Langdb *redis.Client
 
 func init() {
 	defer exception.Errors.DeferRecover()
-	host := conf.Configs.GetAppConf("lang_host")
-	pwd := conf.Configs.GetAppConf("lang_pwd")
-	dbId := conf.Configs.GetAppConf("lang_db")
+	host := conf.Configs.GetString("lang.host")
+	pwd := conf.Configs.GetString("lang.pwd")
+	dbId := conf.Configs.GetString("lang.db")
 
 	dbNo, err := strconv.Atoi(dbId)
 	exception.Errors.CheckErr(err)

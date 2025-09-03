@@ -13,7 +13,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/Unknwon/goconfig"
 	"github.com/decadestory/goutil/br"
 	"github.com/decadestory/goutil/exception"
 	"github.com/decadestory/goutil/misc"
@@ -120,15 +119,6 @@ func (cfg *Config) GetWorkDir() string {
 
 	executablePath, _ := os.Executable()
 	return filepath.Dir(executablePath)
-}
-
-// 根据key获取配置文件中的值
-func (cfg *Config) GetAppConf(configName string) string {
-	c, err := goconfig.LoadConfigFile("conf/conf.ini")
-	exception.Errors.CheckErr(err)
-	res, err := c.GetValue("DEFAULT", configName)
-	exception.Errors.CheckErr(err)
-	return res
 }
 
 // [toml]根据key获取string

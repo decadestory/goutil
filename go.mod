@@ -5,7 +5,6 @@ go 1.23.8
 toolchain go1.24.5
 
 require (
-	github.com/Unknwon/goconfig v1.0.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/lestrrat-go/file-rotatelogs v2.4.0+incompatible
 	github.com/sirupsen/logrus v1.9.2
@@ -62,6 +61,7 @@ require (
 
 require (
 	github.com/IBM/sarama v1.46.0
+	github.com/LinkinStars/go-scaffold v1.0.1
 	github.com/bytedance/sonic v1.8.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -85,7 +85,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/redis/go-redis/v9 v9.2.0
-	github.com/smartystreets/goconvey v1.8.0 // indirect
 	github.com/spf13/viper v1.17.0
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
