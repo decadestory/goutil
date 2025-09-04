@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/decadestory/goutil/br"
@@ -22,6 +23,7 @@ type Micro struct {
 	services map[string]cacheService
 	ttl      time.Duration
 	mu       sync.RWMutex
+	counters map[string]*uint64 // 轮询计数器
 }
 
 type cacheService struct {
@@ -65,6 +67,8 @@ func (m *Micro) RegisterService() {
 	exception.Errors.Panic(err)
 
 	m.ttl = time.Second * 10
+	m.services = make(map[string]cacheService)
+	m.counters = make(map[string]*uint64)
 	fmt.Println("Service registered successfully:", reg.ID)
 }
 
@@ -156,9 +160,22 @@ func (m *Micro) getService(serviceName string) (*api.AgentService, error) {
 		return nil, fmt.Errorf("no service instance available for %s", serviceName)
 	}
 
-	//轮询分配，返回节点
+	// 轮询分配，返回节点
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	return nil, nil
+	// 初始化计数器（如果不存在）
+	if _, exists := m.counters[serviceName]; !exists {
+		var counter uint64 = 0
+		m.counters[serviceName] = &counter
+	}
+
+	// 使用原子操作获取并递增计数器
+	counter := m.counters[serviceName]
+	index := atomic.AddUint64(counter, 1) % uint64(len(entries.svcs))
+	selectedService := entries.svcs[index]
+
+	return selectedService.Service, nil
 }
 
 // Convert 把 any 转换成指定泛型类型 T
