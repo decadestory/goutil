@@ -123,9 +123,6 @@ func (m *Micro) Invoke(c *gin.Context, serviceName, api string, param any, resul
 		return err
 	}
 
-	// 返回响应给客户端
-	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), body)
-
 	err = json.Unmarshal(body, result)
 	if err != nil {
 		return err
