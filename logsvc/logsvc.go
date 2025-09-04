@@ -273,7 +273,8 @@ func (log *LogSvc) LogApiMidware(c *gin.Context) {
 	if reqId == "" {
 		reqId, _ = uuid.GenerateUUID()
 	}
-	c.Set("requestId", reqId)
+	c.Request.Header.Set("requestId", reqId)
+	c.Header("requestId", reqId)
 
 	st := time.Now()
 	var reqData []byte
@@ -344,14 +345,7 @@ func (log *LogSvc) getStack() (funcs string) {
 }
 
 func (log *LogSvc) setReqId(c *gin.Context, item *misc.Logger) {
-
-	reqId, ok := c.Get("requestId")
-	if !ok {
-		item.RequestId, _ = uuid.GenerateUUID()
-		c.Set("requestId", reqId)
-	}
-
-	item.RequestId = reqId.(string)
+	item.RequestId = c.GetHeader("requestId")
 }
 
 func (log *LogSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
