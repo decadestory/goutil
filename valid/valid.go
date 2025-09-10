@@ -7,9 +7,9 @@ import (
 	"github.com/gookit/validate/locales/zhcn"
 )
 
-type Valid struct{}
+type valid struct{}
 
-var Valids = &Valid{}
+var Valids = &valid{}
 
 func init() {
 	zhcn.RegisterGlobal()
@@ -25,7 +25,7 @@ func init() {
 	})
 }
 
-func (v *Valid) DoValid(param any) {
+func (v *valid) DoValid(param any) {
 	errs := validate.Struct(param).ValidateE()
 	if errs.One() != "" {
 		panic(errors.New(errs.One()))

@@ -20,13 +20,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Config struct {
+type config struct {
 	Env string // 环境名称
 	Svc string // 服务名称
 	Cch string // 配置中心地址IP:端口
 }
 
-var Configs = &Config{Env: "", Svc: "", Cch: ""}
+var Configs = &config{Env: "", Svc: "", Cch: ""}
 
 func init() {
 
@@ -53,9 +53,9 @@ func init() {
 	exception.Errors.CheckErr(err)
 }
 
-func (cfg *Config) Init() {}
+func (cfg *config) Init() {}
 
-func createConfigFile(c *Config) {
+func createConfigFile(c *config) {
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -106,12 +106,12 @@ func createConfigFile(c *Config) {
 	exception.Errors.CheckErr(err)
 }
 
-func (cfg *Config) FlushConfig(c *gin.Context) {
+func (cfg *config) FlushConfig(c *gin.Context) {
 	createConfigFile(cfg)
 	br.Brs.Oks(c, "刷新配置成功")
 }
 
-func (cfg *Config) GetWorkDir() string {
+func (cfg *config) GetWorkDir() string {
 	workDir := os.Getenv("DOCKER_GO_WORK_DIR")
 	if workDir != "" {
 		return workDir
@@ -122,21 +122,21 @@ func (cfg *Config) GetWorkDir() string {
 }
 
 // [toml]根据key获取string
-func (cfg *Config) GetString(configName string) string {
+func (cfg *config) GetString(configName string) string {
 	return viper.GetString(configName)
 }
 
 // [toml]根据key获取bool
-func (cfg *Config) GetBool(configName string) bool {
+func (cfg *config) GetBool(configName string) bool {
 	return viper.GetBool(configName)
 }
 
 // [toml]根据key获取int
-func (cfg *Config) GetInt(configName string) int {
+func (cfg *config) GetInt(configName string) int {
 	return viper.GetInt(configName)
 }
 
 // [toml]根据key获取Viper对象
-func (cfg *Config) Viper() *viper.Viper {
+func (cfg *config) Viper() *viper.Viper {
 	return viper.GetViper()
 }

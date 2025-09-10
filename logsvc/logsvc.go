@@ -29,9 +29,9 @@ var sip string
 const maxLogSize = 2 * 1024 * 1024      // 只保留前 2MB
 const truncatedMark = "... [TRUNCATED]" // 只保留前 2MB
 
-type LogSvc struct{}
+type logSvc struct{}
 
-var LogSvcs = LogSvc{}
+var LogSvcs = &logSvc{}
 
 // 自定义 ResponseWriter，实现 gin.ResponseWriter 接口
 type customResponseWriter struct {
@@ -74,7 +74,7 @@ func init() {
 // Infos 不需要传上下文
 // args[0] LogExtTxt
 // args[1] Duration
-func (log *LogSvc) Infos(msg string, args ...any) {
+func (log *logSvc) Infos(msg string, args ...any) {
 
 	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
 	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
@@ -97,7 +97,7 @@ func (log *LogSvc) Infos(msg string, args ...any) {
 // Info
 // args[0] LogExtTxt
 // args[1] Duration
-func (log *LogSvc) Bus(c *gin.Context, msg string, args ...any) {
+func (log *logSvc) Bus(c *gin.Context, msg string, args ...any) {
 
 	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
 	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
@@ -124,7 +124,7 @@ func (log *LogSvc) Bus(c *gin.Context, msg string, args ...any) {
 // Info
 // args[0] LogExtTxt
 // args[1] Duration
-func (log *LogSvc) Info(c *gin.Context, msg string, args ...any) {
+func (log *logSvc) Info(c *gin.Context, msg string, args ...any) {
 
 	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
 	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
@@ -151,7 +151,7 @@ func (log *LogSvc) Info(c *gin.Context, msg string, args ...any) {
 // Debug args[0]
 // LogExtTxt,
 // args[1] Duration
-func (log *LogSvc) Debug(c *gin.Context, msg string, args ...any) {
+func (log *logSvc) Debug(c *gin.Context, msg string, args ...any) {
 
 	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
 	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
@@ -178,7 +178,7 @@ func (log *LogSvc) Debug(c *gin.Context, msg string, args ...any) {
 // Debug args[0]
 // LogExtTxt,
 // args[1] Duration
-func (log *LogSvc) Warn(c *gin.Context, msg string, args ...any) {
+func (log *logSvc) Warn(c *gin.Context, msg string, args ...any) {
 
 	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
 	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
@@ -202,7 +202,7 @@ func (log *LogSvc) Warn(c *gin.Context, msg string, args ...any) {
 	log.kafkaProducer(string(m))
 }
 
-func (log *LogSvc) Error(c *gin.Context, err error) {
+func (log *logSvc) Error(c *gin.Context, err error) {
 	buf := make([]byte, 1024)
 	n := runtime.Stack(buf, false)
 
@@ -224,7 +224,7 @@ func (log *LogSvc) Error(c *gin.Context, err error) {
 	log.kafkaProducer(string(m))
 }
 
-func (log *LogSvc) Fatal(c *gin.Context, r any) {
+func (log *logSvc) Fatal(c *gin.Context, r any) {
 
 	buf := make([]byte, 1024)
 	n := runtime.Stack(buf, false)
@@ -247,7 +247,7 @@ func (log *LogSvc) Fatal(c *gin.Context, r any) {
 	log.kafkaProducer(string(m))
 }
 
-func (log *LogSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
+func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -267,7 +267,7 @@ func (log *LogSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
 	log.kafkaProducer(string(m))
 }
 
-func (log *LogSvc) LogApiMidware(c *gin.Context) {
+func (log *logSvc) LogApiMidware(c *gin.Context) {
 
 	reqId := c.GetHeader("requestId")
 	if reqId == "" {
@@ -301,7 +301,7 @@ func (log *LogSvc) LogApiMidware(c *gin.Context) {
 }
 
 // Gin中间件，全局捕获异常
-func (log *LogSvc) Recover(c *gin.Context) {
+func (log *logSvc) Recover(c *gin.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			debug.PrintStack()
@@ -317,7 +317,7 @@ func (log *LogSvc) Recover(c *gin.Context) {
 	c.Next()
 }
 
-func (log *LogSvc) kafkaProducer(msgTxt string) {
+func (log *logSvc) kafkaProducer(msgTxt string) {
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = "sme-logger"
 	msg.Value = sarama.StringEncoder(msgTxt)
@@ -327,7 +327,7 @@ func (log *LogSvc) kafkaProducer(msgTxt string) {
 	}
 }
 
-func (log *LogSvc) getStack() (funcs string) {
+func (log *logSvc) getStack() (funcs string) {
 	// 获取调用链路径信息
 	pc := make([]uintptr, 10)
 	n := runtime.Callers(0, pc)
@@ -344,11 +344,11 @@ func (log *LogSvc) getStack() (funcs string) {
 	return
 }
 
-func (log *LogSvc) setReqId(c *gin.Context, item *misc.Logger) {
+func (log *logSvc) setReqId(c *gin.Context, item *misc.Logger) {
 	item.RequestId = c.GetHeader("requestId")
 }
 
-func (log *LogSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
+func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 	curUser := auth.AuthRds.GetCurUser(c)
 	if curUser.Id != 0 {
 		item.UserId = strconv.Itoa(curUser.Id)

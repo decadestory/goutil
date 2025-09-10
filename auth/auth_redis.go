@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthRd struct {
+type authRd struct {
 	//该路由下不校验token
 	Ignore []string
 	//token有效时间
@@ -20,7 +20,7 @@ type AuthRd struct {
 	Name string
 }
 
-var AuthRds = &AuthRd{
+var AuthRds = &authRd{
 	Ignore: []string{"/health", "/ui", "/swagger", "/signIn", "/sendVaildCode", "/comm"},
 	Expire: 8 * 60 * time.Minute,
 	Name:   "token",
@@ -46,7 +46,7 @@ func init() {
 	}
 }
 
-func (a *AuthRd) AuthMiddleware(c *gin.Context) {
+func (a *authRd) AuthMiddleware(c *gin.Context) {
 
 	//过滤是否验证token
 	if misc.IsItemLike(a.Ignore, c.Request.RequestURI) {
@@ -75,7 +75,7 @@ func (a *AuthRd) AuthMiddleware(c *gin.Context) {
 	c.Set("curUser", curUser)
 }
 
-func (a *AuthRd) GetCurUser(c *gin.Context) misc.LoginResult {
+func (a *authRd) GetCurUser(c *gin.Context) misc.LoginResult {
 	claims, ok := c.Get("curUser")
 	if !ok {
 		uc := misc.LoginResult{}

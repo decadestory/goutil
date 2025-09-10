@@ -11,26 +11,26 @@ import (
 	"gorm.io/gorm"
 )
 
-type Error struct{}
+type err struct{}
 
-var Errors = &Error{}
+var Errors = &err{}
 
 // 检查错误，打印日志
-func (e *Error) CheckErr(err error) {
+func (e *err) CheckErr(err error) {
 	if err != nil {
 		log.Println(err)
 	}
 }
 
 // 检查错误，打印日志，抛出异常
-func (e *Error) Panic(err error) {
+func (e *err) Panic(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
 // Gin中间件，全局捕获异常
-func (e *Error) Recover(c *gin.Context) {
+func (e *err) Recover(c *gin.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("panic: %v\n", r)
@@ -47,7 +47,7 @@ func (e *Error) Recover(c *gin.Context) {
 }
 
 // recover错误，转string
-func (e *Error) ErrorToString(r interface{}) string {
+func (e *err) ErrorToString(r interface{}) string {
 	switch v := r.(type) {
 	case error:
 		return v.Error()
@@ -57,7 +57,7 @@ func (e *Error) ErrorToString(r interface{}) string {
 }
 
 // 事务中recover错误，抛出异常
-func (e *Error) TranRecover(tx *gorm.DB) {
+func (e *err) TranRecover(tx *gorm.DB) {
 	if r := recover(); r != nil {
 		tx.Rollback()
 		panic(r)
@@ -65,7 +65,7 @@ func (e *Error) TranRecover(tx *gorm.DB) {
 }
 
 // 事务中recover错误，抛出异常
-func (e *Error) DeferRecover() {
+func (e *err) DeferRecover() {
 	if r := recover(); r != nil {
 		debug.PrintStack()
 		log.Println(r)

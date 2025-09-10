@@ -11,9 +11,9 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Lang struct{}
+type lang struct{}
 
-var Langs = &Lang{}
+var Langs = &lang{}
 
 var rctx = context.Background()
 
@@ -34,17 +34,17 @@ func init() {
 	})
 }
 
-func (l *Lang) CodeTip(code, lang string) string {
+func (l *lang) CodeTip(code, lang string) string {
 	res, _ := Langdb.HGet(rctx, code, lang).Result()
 	return strings.Trim(res, "\"")
 }
 
-func (l *Lang) CnTip(code string) string {
+func (l *lang) CnTip(code string) string {
 	res, _ := Langdb.HGet(rctx, code, "cn").Result()
 	return strings.Trim(res, "\"")
 }
 
-func (l *Lang) ConvertTip(msg, lang string) string {
+func (l *lang) ConvertTip(msg, lang string) string {
 	regex := regexp.MustCompile(`#[a-zA-Z0-9]*#`)
 	codeWrap := regex.FindString(msg)
 

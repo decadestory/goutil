@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-type Micro struct {
+type micro struct {
 	client   *api.Client
 	services map[string]cacheService
 	ttl      time.Duration
@@ -31,14 +31,14 @@ type cacheService struct {
 	svcs       []*api.ServiceEntry
 }
 
-var Micros = Micro{}
+var Micros = &micro{}
 
 func init() {
 	Micros.RegisterService()
 }
 
 // 注册服务
-func (m *Micro) RegisterService() {
+func (m *micro) RegisterService() {
 	rcUrl := conf.Configs.GetString("register.center.url")
 	svcName := conf.Configs.GetString("service.name")
 	svcPort := conf.Configs.GetInt("service.port")
@@ -73,7 +73,7 @@ func (m *Micro) RegisterService() {
 }
 
 // 调用服务
-func (m *Micro) Invoke(c *gin.Context, serviceName, api string, param any, result *br.Br) error {
+func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, result *br.Br) error {
 	// 获取服务实例
 	service, err := m.getService(serviceName)
 	if err != nil {
@@ -131,7 +131,7 @@ func (m *Micro) Invoke(c *gin.Context, serviceName, api string, param any, resul
 	return nil
 }
 
-func (m *Micro) getService(serviceName string) (*api.AgentService, error) {
+func (m *micro) getService(serviceName string) (*api.AgentService, error) {
 	m.mu.RLock()
 	entries, ok := m.services[serviceName]
 	expired := !ok || time.Since(entries.lastUpdate) > m.ttl

@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Auth struct {
+type auth struct {
 	//自定义的token秘钥
 	Secret []byte
 	//该路由下不校验token
@@ -22,7 +22,7 @@ type Auth struct {
 	Name string
 }
 
-var Auths = &Auth{
+var Auths = &auth{
 	Secret: []byte("26849841325189456f487"),
 	Ignore: []string{"/ui", "/res", "/export", "/favicon.ico", "/flushConfig"},
 	Expire: 8 * 60 * time.Minute,
@@ -59,7 +59,7 @@ func init() {
 }
 
 // 生成token
-func (a *Auth) GenerateToken(claims *UserClaims) string {
+func (a *auth) GenerateToken(claims *UserClaims) string {
 	claims.ExpiresAt = time.Now().Add(a.Expire).Unix()
 	sign, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(a.Secret)
 	exception.Errors.Panic(err)
@@ -67,7 +67,7 @@ func (a *Auth) GenerateToken(claims *UserClaims) string {
 }
 
 // 验证token
-func (a *Auth) AuthMiddleware(c *gin.Context) {
+func (a *auth) AuthMiddleware(c *gin.Context) {
 
 	//过滤是否验证token
 	if misc.IsItemLike(a.Ignore, c.Request.RequestURI) {
@@ -103,7 +103,7 @@ func (a *Auth) AuthMiddleware(c *gin.Context) {
 	c.Set("curUser", claims)
 }
 
-func (a *Auth) GetCurUser(c *gin.Context) *UserClaims {
+func (a *auth) GetCurUser(c *gin.Context) *UserClaims {
 	claims, ok := c.Get("curUser")
 	if !ok {
 		uc := UserClaims{}

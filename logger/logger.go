@@ -8,12 +8,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Log struct{}
+type log struct{}
 
 var logInfo = logrus.New()
 var logError = logrus.New()
 
-var Logs = Log{}
+var Logs = &log{}
 
 func init() {
 
@@ -39,36 +39,36 @@ func init() {
 }
 
 // Info log
-func (log *Log) Info(args ...interface{}) {
+func (log *log) Info(args ...interface{}) {
 	logInfo.Info(args...)
 }
 
 // Infof log
-func (log *Log) Infof(format string, args ...interface{}) {
+func (log *log) Infof(format string, args ...interface{}) {
 	logInfo.Infof(format, args...)
 }
 
 // Debug log
-func (log *Log) Debug(args ...interface{}) {
+func (log *log) Debug(args ...interface{}) {
 	logInfo.Debug(args...)
 }
 
 // Println log
-func (log *Log) Println(args ...interface{}) {
+func (log *log) Println(args ...interface{}) {
 	logInfo.Println(args...)
 }
 
 // Error log
-func (log *Log) Error(args ...interface{}) {
+func (log *log) Error(args ...interface{}) {
 	logError.Error(args...)
 }
 
 // Errorf log
-func (log *Log) Errorf(format string, args ...interface{}) {
+func (log *log) Errorf(format string, args ...interface{}) {
 	logError.Errorf(format, args...)
 }
 
 // Panic log
-func (log *Log) Panic(args ...interface{}) {
+func (log *log) Panic(args ...interface{}) {
 	logError.Panic(args...)
 }
