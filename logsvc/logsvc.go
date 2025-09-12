@@ -345,12 +345,18 @@ func (log *logSvc) getStack() (funcs string) {
 	frames := runtime.CallersFrames(pc[:n])
 
 	// 遍历调用链路径并打印
+	var i int = 0
 	for {
 		frame, more := frames.Next()
 		if !more {
-			funcs += fmt.Sprintf("%s:%d", frame.Function, frame.Line)
 			break
 		}
+		i++
+		if i != 4 {
+			continue
+		}
+
+		funcs += fmt.Sprintf("%s:%d\n", frame.Function, frame.Line)
 	}
 	return
 }
