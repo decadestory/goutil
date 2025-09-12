@@ -75,19 +75,21 @@ func init() {
 // args[0] LogExtTxt
 // args[1] Duration
 func (log *logSvc) Infos(msg string, args ...any) {
-
-	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
-	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
-
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Path:       log.getStack(),
 		LogType:    "debug",
 		LogLevel:   1,
 		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	if len(args) > 0 {
+		item.LogExtTxt = args[0].(string)
+	}
+
+	if len(args) > 1 {
+		item.Duration = args[1].(int64)
 	}
 
 	m, _ := json.Marshal(item)
@@ -98,10 +100,6 @@ func (log *logSvc) Infos(msg string, args ...any) {
 // args[0] LogExtTxt
 // args[1] Duration
 func (log *logSvc) Bus(c *gin.Context, msg string, args ...any) {
-
-	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
-	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
-
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -109,9 +107,15 @@ func (log *logSvc) Bus(c *gin.Context, msg string, args ...any) {
 		LogType:    "bus",
 		LogLevel:   1,
 		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	if len(args) > 0 {
+		item.LogExtTxt = args[0].(string)
+	}
+
+	if len(args) > 1 {
+		item.Duration = args[1].(int64)
 	}
 
 	log.setUserInfo(c, &item)
@@ -125,10 +129,6 @@ func (log *logSvc) Bus(c *gin.Context, msg string, args ...any) {
 // args[0] LogExtTxt
 // args[1] Duration
 func (log *logSvc) Info(c *gin.Context, msg string, args ...any) {
-
-	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
-	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
-
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -136,9 +136,15 @@ func (log *logSvc) Info(c *gin.Context, msg string, args ...any) {
 		LogType:    "debug",
 		LogLevel:   1,
 		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	if len(args) > 0 {
+		item.LogExtTxt = args[0].(string)
+	}
+
+	if len(args) > 1 {
+		item.Duration = args[1].(int64)
 	}
 
 	log.setUserInfo(c, &item)
@@ -152,10 +158,6 @@ func (log *logSvc) Info(c *gin.Context, msg string, args ...any) {
 // LogExtTxt,
 // args[1] Duration
 func (log *logSvc) Debug(c *gin.Context, msg string, args ...any) {
-
-	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
-	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
-
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -163,9 +165,15 @@ func (log *logSvc) Debug(c *gin.Context, msg string, args ...any) {
 		LogType:    "debug",
 		LogLevel:   2,
 		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	if len(args) > 0 {
+		item.LogExtTxt = args[0].(string)
+	}
+
+	if len(args) > 1 {
+		item.Duration = args[1].(int64)
 	}
 
 	log.setUserInfo(c, &item)
@@ -179,20 +187,23 @@ func (log *logSvc) Debug(c *gin.Context, msg string, args ...any) {
 // LogExtTxt,
 // args[1] Duration
 func (log *logSvc) Warn(c *gin.Context, msg string, args ...any) {
-
-	var ext string = misc.Ternary(len(args) > 0, args[0].(string), "")
-	var dur int64 = misc.Ternary(len(args) > 1, args[1].(int64), 0)
-
 	item := misc.Logger{
-		ServiceId:  serviceId,
-		Ip:         sip,
-		Path:       log.getStack(),
-		LogType:    "debug",
-		LogLevel:   3,
-		LogTxt:     msg,
-		LogExtTxt:  ext,
-		Duration:   dur,
+		ServiceId: serviceId,
+		Ip:        sip,
+		Path:      log.getStack(),
+		LogType:   "debug",
+		LogLevel:  3,
+		LogTxt:    msg,
+
 		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	if len(args) > 0 {
+		item.LogExtTxt = args[0].(string)
+	}
+
+	if len(args) > 1 {
+		item.Duration = args[1].(int64)
 	}
 
 	log.setUserInfo(c, &item)
@@ -251,7 +262,7 @@ func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
-		Path:       c.FullPath(),
+		Path:       c.Request.RequestURI,
 		LogType:    "api",
 		LogLevel:   1,
 		LogTxt:     reqData,
