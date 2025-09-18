@@ -406,5 +406,8 @@ func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql s
 	if err != nil {
 		errStr = exception.Errors.ErrorToString(err)
 	}
-	LogSvcs.LogSql(ctx.(*gin.Context), int64(duration), fmt.Sprintf("%s:%d", sql, rows), errStr)
+
+	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
+		LogSvcs.LogSql(gc, int64(duration), fmt.Sprintf("%s:%d", sql, rows), errStr)
+	}
 }
