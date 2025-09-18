@@ -2,6 +2,7 @@ package logsvc
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 	"github.com/decadestory/goutil/misc"
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-uuid"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 var serviceId string
@@ -32,6 +34,10 @@ const truncatedMark = "... [TRUNCATED]" // 只保留前 2MB
 type logSvc struct{}
 
 var LogSvcs = &logSvc{}
+
+type SvcLogger struct {
+	gormlogger.Interface
+}
 
 // 自定义 ResponseWriter，实现 gin.ResponseWriter 接口
 type customResponseWriter struct {
@@ -278,6 +284,26 @@ func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
 	log.kafkaProducer(string(m))
 }
 
+func (log *logSvc) LogSql(c *gin.Context, dur int64, sql, err string) {
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
+		Path:       c.Request.RequestURI,
+		LogType:    "sql",
+		LogLevel:   1,
+		LogTxt:     sql,
+		LogExtTxt:  err,
+		Duration:   dur,
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
+
+	log.setUserInfo(c, &item)
+	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
 func (log *logSvc) LogApiMidware(c *gin.Context) {
 
 	reqId := c.GetHeader("requestId")
@@ -371,4 +397,10 @@ func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 		item.UserId = strconv.Itoa(curUser.Id)
 		item.Account = curUser.Account
 	}
+}
+
+func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
+	sql, rows := fc()
+	duration := time.Since(begin)
+	LogSvcs.LogSql(ctx.(*gin.Context), int64(duration), fmt.Sprintf("%s:%d", sql, rows), exception.Errors.ErrorToString(err))
 }
