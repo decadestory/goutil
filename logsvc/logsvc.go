@@ -401,13 +401,13 @@ func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 
 func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
 	sql, rows := fc()
-	duration := time.Since(begin)
+	duration := time.Since(begin).Milliseconds()
 	errStr := ""
 	if err != nil {
 		errStr = exception.Errors.ErrorToString(err)
 	}
 
 	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
-		LogSvcs.LogSql(gc, int64(duration), fmt.Sprintf("%s:%d", sql, rows), errStr)
+		LogSvcs.LogSql(gc, duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
 	}
 }
