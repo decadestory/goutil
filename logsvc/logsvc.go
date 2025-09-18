@@ -264,7 +264,7 @@ func (log *logSvc) Fatal(c *gin.Context, r any) {
 	log.kafkaProducer(string(m))
 }
 
-func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
+func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string, st time.Time) {
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -274,7 +274,7 @@ func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string) {
 		LogTxt:     reqData,
 		LogExtTxt:  repData,
 		Duration:   dur,
-		CreateTime: time.Now().Format(misc.FMTMillSEC),
+		CreateTime: st.Format(misc.FMTMillSEC),
 	}
 
 	log.setUserInfo(c, &item)
@@ -334,7 +334,7 @@ func (log *logSvc) LogApiMidware(c *gin.Context) {
 	c.Writer = writer
 	c.Next()
 
-	log.LogApi(c, time.Since(st).Milliseconds(), string(reqData), writer.body.String())
+	log.LogApi(c, time.Since(st).Milliseconds(), string(reqData), writer.body.String(), st)
 }
 
 // Gin中间件，全局捕获异常
