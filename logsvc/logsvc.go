@@ -402,5 +402,9 @@ func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
 	sql, rows := fc()
 	duration := time.Since(begin)
-	LogSvcs.LogSql(ctx.(*gin.Context), int64(duration), fmt.Sprintf("%s:%d", sql, rows), exception.Errors.ErrorToString(err))
+	errStr := ""
+	if err != nil {
+		errStr = exception.Errors.ErrorToString(err)
+	}
+	LogSvcs.LogSql(ctx.(*gin.Context), int64(duration), fmt.Sprintf("%s:%d", sql, rows), errStr)
 }
