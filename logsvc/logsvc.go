@@ -74,9 +74,9 @@ func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql s
 	}
 
 	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
-		LogSvcs.LogSqlWithContext(gc, duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
+		LogSvcs.LogSqlWithContext(gc, duration, fmt.Sprintf("%s:%d\n%s", sql, rows, errStr), errStr)
 	} else {
-		LogSvcs.LogSql(duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
+		LogSvcs.LogSql(duration, fmt.Sprintf("%s:%d\n%s", sql, rows, errStr), errStr)
 	}
 }
 
