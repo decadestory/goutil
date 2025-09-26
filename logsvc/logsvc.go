@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"runtime"
 	"runtime/debug"
@@ -56,6 +57,27 @@ func (w *customResponseWriter) Write(data []byte) (int, error) {
 		}
 	}
 	return w.ResponseWriter.Write(data)
+}
+
+func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
+	sql, rows := fc()
+	duration := time.Since(begin).Milliseconds()
+	errStr := ""
+	if err != nil {
+		errStr = exception.Errors.ErrorToString(err)
+		log.Printf("[ERROR] %s", errStr)
+	}
+
+	if duration >= 200 {
+		errStr = exception.Errors.ErrorToString(err)
+		log.Printf("[WARN] [%dms] %s", duration, errStr)
+	}
+
+	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
+		LogSvcs.LogSqlWithContext(gc, duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
+	} else {
+		LogSvcs.LogSql(duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
+	}
 }
 
 func init() {
@@ -284,7 +306,7 @@ func (log *logSvc) LogApi(c *gin.Context, dur int64, reqData, repData string, st
 	log.kafkaProducer(string(m))
 }
 
-func (log *logSvc) LogSql(c *gin.Context, dur int64, sql, err string) {
+func (log *logSvc) LogSqlWithContext(c *gin.Context, dur int64, sql, err string) {
 	item := misc.Logger{
 		ServiceId:  serviceId,
 		Ip:         sip,
@@ -299,6 +321,23 @@ func (log *logSvc) LogSql(c *gin.Context, dur int64, sql, err string) {
 
 	log.setUserInfo(c, &item)
 	log.setReqId(c, &item)
+
+	m, _ := json.Marshal(item)
+	log.kafkaProducer(string(m))
+}
+
+func (log *logSvc) LogSql(dur int64, sql, err string) {
+	item := misc.Logger{
+		ServiceId:  serviceId,
+		Ip:         sip,
+		Path:       "",
+		LogType:    "sql",
+		LogLevel:   1,
+		LogTxt:     sql,
+		LogExtTxt:  err,
+		Duration:   dur,
+		CreateTime: time.Now().Format(misc.FMTMillSEC),
+	}
 
 	m, _ := json.Marshal(item)
 	log.kafkaProducer(string(m))
@@ -396,18 +435,5 @@ func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 	if curUser.Id != 0 {
 		item.UserId = strconv.Itoa(curUser.Id)
 		item.Account = curUser.Account
-	}
-}
-
-func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
-	sql, rows := fc()
-	duration := time.Since(begin).Milliseconds()
-	errStr := ""
-	if err != nil {
-		errStr = exception.Errors.ErrorToString(err)
-	}
-
-	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
-		LogSvcs.LogSql(gc, duration, fmt.Sprintf("%s:%d", sql, rows), errStr)
 	}
 }
