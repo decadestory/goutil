@@ -69,8 +69,7 @@ func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql s
 	}
 
 	if duration >= 200 {
-		errStr = exception.Errors.ErrorToString(err)
-		log.Printf("[WARN] [%dms] %s", duration, errStr)
+		log.Printf("[WARN] [%dms] %s", duration, sql)
 	}
 
 	if gc, ok := ctx.(*gin.Context); ok && gc != nil {
