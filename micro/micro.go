@@ -42,6 +42,7 @@ func (m *micro) RegisterService() {
 	rcUrl := conf.Configs.GetString("register.center.url")
 	svcName := conf.Configs.GetString("service.name")
 	svcPort := conf.Configs.GetInt("service.port")
+	healthUrl := conf.Configs.GetString("service.health.url")
 
 	// 注册到 Consul
 	consulConfig := api.DefaultConfig()
@@ -51,13 +52,14 @@ func (m *micro) RegisterService() {
 	exception.Errors.Panic(err)
 
 	localIp := misc.GetIp()
+	healthUrl = misc.Ternary(healthUrl == "", fmt.Sprintf("http://%s:%d/health", localIp, svcPort), healthUrl)
 	reg := &api.AgentServiceRegistration{
 		ID:      fmt.Sprintf("%s:%s:%d", svcName, localIp, svcPort),
 		Name:    svcName,
 		Address: localIp, // 本地 IP
 		Port:    svcPort,
 		Check: &api.AgentServiceCheck{
-			HTTP:     fmt.Sprintf("http://%s:%d/health", localIp, svcPort),
+			HTTP:     healthUrl,
 			Interval: "10s",
 			Timeout:  "1s",
 		},
