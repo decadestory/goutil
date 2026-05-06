@@ -76,7 +76,7 @@ func (a *auth) AuthMiddleware(c *gin.Context) {
 
 	token := c.GetHeader(a.Name)
 	if token == "" {
-		br.Brs.Okc(c, "登录过期，请重新登录", 403)
+		br.Brs.Okc(c, 403, "登录过期，请重新登录")
 		c.Abort()
 		return
 	}
@@ -87,14 +87,14 @@ func (a *auth) AuthMiddleware(c *gin.Context) {
 	})
 
 	if err != nil {
-		br.Brs.Okc(c, "登录过期，请重新登录", 403)
+		br.Brs.Okc(c, 403, "登录过期，请重新登录")
 		c.Abort()
 		return
 	}
 
 	claims, ok := jwt.Claims.(*UserClaims)
 	if !ok {
-		br.Brs.Okc(c, "登录过期，请重新登录", 403)
+		br.Brs.Okc(c, 403, "登录过期，请重新登录")
 		c.Abort()
 		return
 	}

@@ -55,14 +55,14 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 
 	token := c.GetHeader(a.Name)
 	if token == "" {
-		br.Brs.Okc(c, "认证失败，请重新登录", 403)
+		br.Brs.Okc(c, 403, "认证失败，请重新登录")
 		c.Abort()
 		return
 	}
 
 	userJson := redis.Rdb["default"].Get(c, token)
 	if userJson.Err() != nil {
-		br.Brs.Okc(c, "认证失败，请重新登录", 403)
+		br.Brs.Okc(c, 403, "认证失败，请重新登录")
 		c.Abort()
 		return
 	}
