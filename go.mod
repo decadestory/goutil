@@ -11,8 +11,6 @@ require (
 	gorm.io/gorm v1.25.1
 )
 
-require github.com/go-redis/redis/v8 v8.11.5 // indirect
-
 require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -90,7 +88,7 @@ require (
 	github.com/spf13/viper v1.17.0
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
-	github.com/yitter/idgenerator-go v1.3.3
+	github.com/yitter/idgenerator-go v1.2.2
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
