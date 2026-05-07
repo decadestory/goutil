@@ -44,7 +44,7 @@ type Logger struct {
 
 type LoginResult struct {
 	// 用户ID
-	Id int `json:"id"`
+	Id string `json:"id"`
 	// 用户名
 	UserName string `json:"userName"`
 	// 账号

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"runtime"
 	"runtime/debug"
-	"strconv"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -431,8 +430,8 @@ func (log *logSvc) setReqId(c *gin.Context, item *misc.Logger) {
 
 func (log *logSvc) setUserInfo(c *gin.Context, item *misc.Logger) {
 	curUser := auth.AuthRds.GetCurUser(c)
-	if curUser.Id != 0 {
-		item.UserId = strconv.Itoa(curUser.Id)
+	if curUser.Id != "" {
+		item.UserId = curUser.Id
 		item.Account = curUser.Account
 	}
 }
