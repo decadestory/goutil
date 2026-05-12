@@ -380,7 +380,7 @@ func (log *logSvc) Recover(c *gin.Context) {
 		if r := recover(); r != nil {
 			debug.PrintStack()
 			//封装通用json返回
-			res := br.Br{Status: -2, ExtData: 0, Data: nil, Msg: exception.Errors.ErrorToString(r)}
+			res := br.Br{Status: -1, Code: -1, Msg: exception.Errors.ErrorToString(r)}
 			log.Fatal(c, r)
 			c.JSON(http.StatusOK, res)
 			//终止后续接口调用，不加的话recover到异常后，还会继续执行接口里后续代码

@@ -31,3 +31,11 @@ func (v *valid) DoValid(param any) {
 		panic(errors.New(errs.One()))
 	}
 }
+
+func (v *valid) DoValidErr(param any) error {
+	errs := validate.Struct(param).ValidateE()
+	if errs.One() != "" {
+		return errors.New(errs.One())
+	}
+	return nil
+}
