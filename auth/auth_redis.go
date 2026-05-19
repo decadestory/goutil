@@ -67,11 +67,17 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	// TODO: 这里可以添加对token的验证逻辑，比如签名验证等
+	// 解析token
 	var curUser misc.LoginResult
 	json.Unmarshal([]byte(userJson.Val()), &curUser)
 
-	//验证token，并存储在请求中
+	// 更新过期时间
+	isRefresh := conf.Configs.GetBool("auth.refresh")
+	if isRefresh {
+		redis.Rdb["default"].Expire(c, token, a.Expire)
+	}
+
+	//存储在请求中
 	c.Set("curUser", curUser)
 }
 
