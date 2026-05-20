@@ -29,13 +29,13 @@ var AuthRds = &authRd{
 func init() {
 	effTime := conf.Configs.GetInt("auth.expire")
 	if effTime > 0 {
-		AuthRds.Expire = time.Duration(effTime) * 60 * time.Minute
+		AuthRds.Expire = time.Duration(effTime) * time.Minute
 	}
 
 	ignore := conf.Configs.Viper().Get("auth.ignore")
 	if ignore != nil {
 		AuthRds.Ignore = []string{}
-		for _, each := range ignore.([]interface{}) {
+		for _, each := range ignore.([]any) {
 			AuthRds.Ignore = append(AuthRds.Ignore, each.(string))
 		}
 	}
