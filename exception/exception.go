@@ -1,11 +1,13 @@
 package exception
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"runtime/debug"
 
 	"github.com/decadestory/goutil/br"
+	"github.com/decadestory/goutil/misc"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -26,6 +28,14 @@ func (e *err) CheckErr(err error) {
 func (e *err) Panic(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+// 检查错误，打印日志，抛出异常,可自定义异常信息
+func (e *err) CheckPanic(err error, msg string) {
+	if err != nil {
+		msg := misc.Ternary(msg != "", msg, err.Error())
+		panic(errors.New(msg))
 	}
 }
 
