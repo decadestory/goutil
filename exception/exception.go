@@ -46,7 +46,7 @@ func (e *err) Recover(c *gin.Context) {
 			log.Printf("panic: %v\n", r)
 			debug.PrintStack()
 			//封装通用json返回
-			res := br.Br{Status: -1, Code: -1, Msg: Errors.ErrorToString(r)}
+			res := br.Br{Code: -1, Msg: Errors.ErrorToString(r)}
 			c.JSON(http.StatusOK, res)
 			//终止后续接口调用，不加的话recover到异常后，还会继续执行接口里后续代码
 			c.Abort()

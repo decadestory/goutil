@@ -85,10 +85,10 @@ func createConfigFile(c *config) {
 	var res br.Br
 	err = json.Unmarshal(body, &res)
 	exception.Errors.CheckErr(err)
-	if res.Status != 1 {
+	if res.Code != 1 {
 		exception.Errors.CheckErr(errors.New(res.Msg))
 	}
-	resultData := res.Data.(map[string]interface{})
+	resultData := res.Data.(map[string]any)
 	configData := resultData["config"].(string)
 
 	// 写入配置文件
