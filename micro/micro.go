@@ -3,6 +3,7 @@ package micro
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -75,7 +76,7 @@ func (m *micro) RegisterService() {
 }
 
 // 调用服务
-func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, result *br.Br) error {
+func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, result *any) error {
 	// 获取服务实例
 	service, err := m.getService(serviceName)
 	if err != nil {
@@ -125,9 +126,76 @@ func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, resul
 		return err
 	}
 
-	err = json.Unmarshal(body, result)
+	var res br.Br
+	err = json.Unmarshal(body, &res)
 	if err != nil {
 		return err
+	}
+
+	if res.Code != 1 {
+		return errors.New(res.Msg)
+	} else {
+		result = &res.Data
+	}
+
+	return nil
+}
+
+// 调用服务带头信息
+func (m *micro) InvokeWithHeader(serviceName, api string, param any, headers map[string]string, result *any) error {
+	// 获取服务实例
+	service, err := m.getService(serviceName)
+	if err != nil {
+		return err
+	}
+
+	// 准备请求体
+	var requestBody []byte
+	if param != nil {
+		requestBody, err = json.Marshal(param)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 创建HTTP请求
+	serviceURL := fmt.Sprintf("http://%s:%d%s", service.Address, service.Port, api)
+	req, err := http.NewRequest("POST", serviceURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return err
+	}
+
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json")
+
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	// 发送请求
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var res br.Br
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return err
+	}
+
+	if res.Code != 1 {
+		return errors.New(res.Msg)
+	} else {
+		result = &res.Data
 	}
 
 	return nil
