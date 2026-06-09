@@ -65,7 +65,7 @@ func init() {
 	})
 
 	validate.AddValidator("space", func(val any) bool {
-		return strings.Contains(val.(string), " ")
+		return !strings.Contains(val.(string), " ")
 	})
 }
 
