@@ -76,11 +76,11 @@ func (m *micro) RegisterService() {
 }
 
 // 调用服务
-func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, result *any) error {
+func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any) (resultData any, err error) {
 	// 获取服务实例
 	service, err := m.getService(serviceName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 准备请求体
@@ -88,7 +88,7 @@ func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, resul
 	if param != nil {
 		requestBody, err = json.Marshal(param)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -96,57 +96,44 @@ func (m *micro) Invoke(c *gin.Context, serviceName, api string, param any, resul
 	serviceURL := fmt.Sprintf("http://%s:%d%s", service.Address, service.Port, api)
 	req, err := http.NewRequest("POST", serviceURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// 设置请求头
-	req.Header.Set("Content-Type", "application/json")
-
-	// 添加token头（如果存在）
-	if token := c.GetHeader("token"); token != "" {
-		req.Header.Set("token", token)
-	}
-
-	// 添加requestId头（如果存在）
-	if requestId := c.GetHeader("requestId"); requestId != "" {
-		req.Header.Set("requestId", requestId)
-	}
+	// 透传所有Header
+	req.Header = c.Request.Header.Clone()
 
 	// 发送请求
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var res br.Br
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if res.Code != 1 {
-		return errors.New(res.Msg)
+		return nil, errors.New(res.Msg)
 	} else {
-		result = &res.Data
+		return res.Data, nil
 	}
-
-	return nil
 }
 
-// 调用服务带头信息
-func (m *micro) InvokeWithHeader(serviceName, api string, param any, headers map[string]string, result *any) error {
+func (m *micro) InvokeNoContext(serviceName, api string, param any, headers map[string]string) (resultData any, err error) {
 	// 获取服务实例
 	service, err := m.getService(serviceName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// 准备请求体
@@ -154,7 +141,7 @@ func (m *micro) InvokeWithHeader(serviceName, api string, param any, headers map
 	if param != nil {
 		requestBody, err = json.Marshal(param)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -162,12 +149,11 @@ func (m *micro) InvokeWithHeader(serviceName, api string, param any, headers map
 	serviceURL := fmt.Sprintf("http://%s:%d%s", service.Address, service.Port, api)
 	req, err := http.NewRequest("POST", serviceURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// 设置请求头
+	// 透传所有Header
 	req.Header.Set("Content-Type", "application/json")
-
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
@@ -176,29 +162,27 @@ func (m *micro) InvokeWithHeader(serviceName, api string, param any, headers map
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	// 读取响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var res br.Br
 	err = json.Unmarshal(body, &res)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if res.Code != 1 {
-		return errors.New(res.Msg)
+		return nil, errors.New(res.Msg)
 	} else {
-		result = &res.Data
+		return res.Data, nil
 	}
-
-	return nil
 }
 
 func (m *micro) getService(serviceName string) (*api.AgentService, error) {
