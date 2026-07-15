@@ -1,7 +1,12 @@
 package misc
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 
@@ -84,4 +89,55 @@ func Decrypt(str string) string {
 	key := "d8eab717abeca26cf5d0af2e216fa9f4"
 	res = cryptor.AesSimpleDecrypt(str, key)
 	return res
+}
+
+// 通用对称加密方案(AES-256-GCM)
+func AesEncrypt(plainText string) (string, error) {
+	key := []byte(KEY)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	iv := make([]byte, gcm.NonceSize()) // 12字节
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", err
+	}
+
+	// Seal 会返回:密文+Tag,并把结果append到dst(这里dst=iv,所以直接拼在iv后面)
+	cipherData := gcm.Seal(iv, iv, []byte(plainText), nil)
+	return base64.StdEncoding.EncodeToString(cipherData), nil
+}
+
+// 通用对称加密方案(AES-256-GCM)
+func AesDecrypt(base64Data string) (string, error) {
+	key := []byte(KEY)
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	ivLen := gcm.NonceSize()
+	iv, cipherText := data[:ivLen], data[ivLen:]
+
+	plainText, err := gcm.Open(nil, iv, cipherText, nil)
+	if err != nil {
+		return "", err
+	}
+	return string(plainText), nil
 }

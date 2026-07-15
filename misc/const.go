@@ -5,3 +5,5 @@ const FMTSEC string = "2006-01-02 15:04:05"
 const FMTMIN string = "2006-01-02 15:04"
 const FMTDAY string = "2006-01-02"
 const FMTMON string = "2006-01"
+
+const KEY string = "d8eab717abeca26cf5d0af2e216fa9f4"
