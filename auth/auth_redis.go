@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/decadestory/goutil/br"
@@ -73,7 +74,8 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 
 	// 更新过期时间
 	isRefresh := conf.Configs.GetBool("auth.refresh")
-	if isRefresh {
+	refreshExpect := conf.Configs.GetString("auth.refresh.except")
+	if isRefresh && !strings.Contains(refreshExpect, token) {
 		redis.Rdb["default"].Expire(c, token, a.Expire)
 	}
 
