@@ -73,7 +73,7 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 	json.Unmarshal([]byte(userJson.Val()), &curUser)
 
 	// 更新过期时间
-	isRefresh := conf.Configs.GetBool("auth.refresh")
+	isRefresh := conf.Configs.GetBool("auth.refresh.enable")
 	refreshExpect := conf.Configs.GetString("auth.refresh.except")
 	if isRefresh && !strings.Contains(refreshExpect, token) {
 		redis.Rdb["default"].Expire(c, token, a.Expire)
