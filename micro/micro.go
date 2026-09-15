@@ -45,6 +45,11 @@ func (m *micro) RegisterService() {
 	svcPort := conf.Configs.GetInt("service.port")
 	healthUrl := conf.Configs.GetString("service.health.url")
 
+	if rcUrl == "" {
+		exception.Errors.CheckErr(errors.New("register.center.url is not configured"))
+		return
+	}
+
 	// 注册到 Consul
 	consulConfig := api.DefaultConfig()
 	consulConfig.Address = rcUrl
