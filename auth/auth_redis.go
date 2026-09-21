@@ -61,7 +61,8 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	userJson := redis.Rdb["default"].Get(c, token)
+	isRedisCluster := conf.Configs.GetBool("redis.cluster")
+	userJson := misc.Ternary(isRedisCluster, redis.Rdbc["default"].Get(c, token), redis.Rdb["default"].Get(c, token))
 	if userJson.Err() != nil {
 		br.Brs.Okc(c, 403, "认证失败，请重新登录")
 		c.Abort()
@@ -76,7 +77,11 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 	isRefresh := conf.Configs.GetBool("auth.refresh.enable")
 	refreshExpect := conf.Configs.GetString("auth.refresh.except")
 	if isRefresh && !strings.Contains(refreshExpect, token) {
-		redis.Rdb["default"].Expire(c, token, a.Expire)
+		if isRedisCluster {
+			redis.Rdbc["default"].Expire(c, token, a.Expire)
+		} else {
+			redis.Rdb["default"].Expire(c, token, a.Expire)
+		}
 	}
 
 	//存储在请求中
