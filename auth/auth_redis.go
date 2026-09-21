@@ -62,7 +62,12 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 	}
 
 	isRedisCluster := conf.Configs.GetBool("redis.cluster")
-	userJson := misc.Ternary(isRedisCluster, redis.Rdbc["default"].Get(c, token), redis.Rdb["default"].Get(c, token))
+	var userJson *redis.StringCmd
+	if isRedisCluster {
+		userJson = redis.Rdbc["default"].Get(c, token)
+	} else {
+		userJson = redis.Rdb["default"].Get(c, token)
+	}
 	if userJson.Err() != nil {
 		br.Brs.Okc(c, 403, "认证失败，请重新登录")
 		c.Abort()

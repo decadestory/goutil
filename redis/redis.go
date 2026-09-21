@@ -11,6 +11,12 @@ import (
 var Rdb map[string]*redis.Client = make(map[string]*redis.Client)
 var Rdbc map[string]*redis.ClusterClient = make(map[string]*redis.ClusterClient)
 
+// StringCmd 是 go-redis StringCmd 的别名，调用方无需再直接引入 go-redis
+type StringCmd = redis.StringCmd
+
+// Cmd 是 go-redis Cmd 的别名，用于 Expire/Set 等不返回具体类型的命令
+type Cmd = redis.Cmd
+
 func init() {
 
 	defer exception.Errors.DeferRecover()
