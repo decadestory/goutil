@@ -73,4 +73,51 @@ func init() {
 		}
 	}
 
+	redisSentinelArr := conf.Configs.Viper().Get("redis-sentinel")
+	if redisSentinelArr != nil {
+		for _, v := range redisSentinelArr.([]interface{}) {
+			mv := v.(map[string]interface{})
+			dbNo := 0
+			usr := ""
+			name := "default"
+			master := "mymaster"
+			sentinelUsr := ""
+			sentinelPwd := ""
+
+			if vdb, ok := mv["db"]; ok {
+				dbNo = int(vdb.(int64))
+			}
+
+			if vdb, ok := mv["user"]; ok {
+				usr = vdb.(string)
+			}
+
+			if vdb, ok := mv["name"]; ok {
+				name = vdb.(string)
+			}
+
+			if vdb, ok := mv["master"]; ok {
+				master = vdb.(string)
+			}
+
+			if vdb, ok := mv["sentinel-user"]; ok {
+				sentinelUsr = vdb.(string)
+			}
+
+			if vdb, ok := mv["sentinel-pwd"]; ok {
+				sentinelPwd = vdb.(string)
+			}
+
+			Rdb[name] = redis.NewFailoverClient(&redis.FailoverOptions{
+				MasterName:       master,
+				SentinelAddrs:    strings.Split(mv["host"].(string), ","),
+				Username:         usr,
+				Password:         mv["pwd"].(string),
+				DB:               dbNo,
+				SentinelUsername: sentinelUsr,
+				SentinelPassword: sentinelPwd,
+			})
+		}
+	}
+
 }
