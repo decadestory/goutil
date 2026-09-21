@@ -61,7 +61,7 @@ func (a *authRd) AuthMiddleware(c *gin.Context) {
 		return
 	}
 
-	isRedisCluster := conf.Configs.GetBool("redis.cluster")
+	isRedisCluster := conf.Configs.GetBool("is.redis.cluster")
 	var userJson *redis.StringCmd
 	if isRedisCluster {
 		userJson = redis.Rdbc["default"].Get(c, token)
