@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -80,6 +81,16 @@ func (l *SvcLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql s
 
 func init() {
 	var host string = conf.Configs.GetString("kafka.log.host")
+	if host == "" {
+		logger.Logs.Error("kafka.log.host is empty")
+		return
+	}
+
+	hosts := []string{host}
+	if strings.Contains(host, ",") {
+		hosts = strings.Split(host, ",")
+	}
+
 	serviceId = conf.Configs.GetString("service.name")
 	sip = misc.GetIp()
 	config := sarama.NewConfig()
@@ -90,7 +101,7 @@ func init() {
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Timeout = time.Second * 1
 	config.Producer.Return.Successes = true
-	newClient, err := sarama.NewSyncProducer([]string{host}, config)
+	newClient, err := sarama.NewSyncProducer(hosts, config)
 	if err != nil {
 		logger.Logs.Error(err)
 	}
