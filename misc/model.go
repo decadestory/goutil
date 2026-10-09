@@ -56,3 +56,17 @@ type LoginResult struct {
 	// Token
 	Token string `json:"token"`
 }
+
+// 第三方应用（ApiKey/AppSecret）信息
+type AppInfo struct {
+	// ApiKey，第三方请求头中携带，全局唯一
+	Key string `json:"key"`
+	// AppSecret，仅参与签名计算，不在网络上传输
+	Secret string `json:"secret"`
+	// 第三方名称，仅用于日志排查
+	Name string `json:"name"`
+	// 是否启用，可在线吊销
+	Valid bool `json:"valid"`
+	// 允许访问的接口路径，为空表示不限制
+	Apis []string `json:"apis"`
+}
