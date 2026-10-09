@@ -19,8 +19,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 第三方应用密钥来源。业务方接 DB/Redis 时替换 AuthApis.Apps 即可，
-// 未设置时走配置文件的 auth.api.app 列表。
+// 第三方应用密钥来源，业务方接 DB/Redis 时实现该回调赋给 AuthApis.AppFunc。
+// 中间件每次请求都会调用，未赋值会 panic，务必在注册路由前设置。
 type ApiAppLoader func(c *gin.Context, appKey string) (misc.AppInfo, bool)
 
 type apiAuth struct {
@@ -42,7 +42,7 @@ type apiAuth struct {
 	NonceFailOpen bool
 	// 认证失败的返回业务码
 	FailCode int
-	// 密钥来源，为空则读配置
+	// 密钥来源，必须由业务方设置
 	AppFunc ApiAppLoader
 }
 

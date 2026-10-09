@@ -249,17 +249,34 @@ failcode = 401
 noncecheck = true
 # Redis 不可用时是否放行。false=拒绝，避免故障期间被重放
 noncefailopen = false
-
-# 第三方应用列表，未设置 Apps 回调时从配置读取
-[[auth.api.app]]
-key = "ak_demo"
-secret = "sk_demo_secret"
-name = "某第三方"
-# 允许访问的接口，为空表示不限制
-apis = ["/v1/order"]
 ```
 
-挂载：
+### 4.1 密钥来源
+
+第三方应用**不再从配置文件读取**，必须给 `AuthApis.AppFunc` 赋值，中间件每次请求都通过它按 ApiKey 取应用信息：
+
+```go
+auth.AuthApis.AppFunc = func(c *gin.Context, appKey string) (misc.AppInfo, bool) {
+    app, err := appRepo.GetByKey(c, appKey)
+    if err != nil {
+        return misc.AppInfo{}, false
+    }
+    return app, true
+}
+```
+
+未赋值时中间件会在请求到达时 panic，务必在注册路由前设置。
+
+返回值 `misc.AppInfo` 中与认证相关的字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `Key` | ApiKey，与请求头一致（回调内部查库用） |
+| `Secret` | AppSecret，参与验签 |
+| `Valid` | 为 `false` 时视为无效的 ApiKey |
+| `Apis` | 允许访问的接口，为空表示不限制 |
+
+### 4.2 挂载
 
 ```go
 r := gin.New()
@@ -272,20 +289,6 @@ r.Use(auth.AuthApis.AuthMiddleware)
 ```go
 app := auth.AuthApis.GetCurApp(c)
 ```
-
-若第三方密钥存放在 DB 或 Redis，用回调替换配置来源：
-
-```go
-auth.AuthApis.Apps = func(c *gin.Context, appKey string) (misc.AppInfo, bool) {
-    app, err := appRepo.GetByKey(c, appKey)
-    if err != nil {
-        return misc.AppInfo{}, false
-    }
-    return app, true
-}
-```
-
-也可以启动时加载好再回填：`auth.SetApps(apps)`。
 
 ## 五、返回格式
 
@@ -302,7 +305,8 @@ auth.AuthApis.Apps = func(c *gin.Context, appKey string) (misc.AppInfo, bool) {
 | 缺少认证参数 | 四个认证头有缺失 |
 | 时间戳格式错误 | `X-Timestamp` 不是整数 |
 | 请求已过期 | 超出 `expire` 窗口 |
-| 无效的 ApiKey | ApiKey 不存在或已停用 |
+| 无效的 ApiKey | `AppFunc` 未查到该 ApiKey，或 `Valid` 为 `false` |
+| 请求体读取失败 | 读取 body 出错 |
 | 请求体过大 | 超过 `maxbody` |
 | 签名验证失败 | 签名不匹配，或密钥错误 |
 | 重复请求 | nonce 已被使用 |
