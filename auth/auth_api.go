@@ -43,7 +43,7 @@ type apiAuth struct {
 	// 认证失败的返回业务码
 	FailCode int
 	// 密钥来源，为空则读配置
-	Apps ApiAppLoader
+	AppFunc ApiAppLoader
 }
 
 var AuthApis = &apiAuth{
@@ -57,9 +57,6 @@ var AuthApis = &apiAuth{
 	NonceCheck:    true,
 	FailCode:      401,
 }
-
-// 配置文件中配置的第三方应用，key 为 ApiKey
-var confApps = make(map[string]misc.AppInfo)
 
 func init() {
 	expire := conf.Configs.GetInt("auth.api.expire")
@@ -105,59 +102,6 @@ func init() {
 			AuthApis.Ignore = append(AuthApis.Ignore, each.(string))
 		}
 	}
-
-	LoadConfApps()
-}
-
-// 从配置文件加载第三方应用，可重复调用以支持配置中心热更
-func LoadConfApps() {
-	apps := conf.Configs.Viper().Get("auth.api.app")
-	if apps == nil {
-		return
-	}
-
-	loaded := make(map[string]misc.AppInfo)
-	for _, each := range apps.([]any) {
-		mv := each.(map[string]any)
-		app := misc.AppInfo{Valid: true}
-
-		if v, ok := mv["key"]; ok {
-			app.Key = v.(string)
-		}
-		if v, ok := mv["secret"]; ok {
-			app.Secret = v.(string)
-		}
-		if v, ok := mv["name"]; ok {
-			app.Name = v.(string)
-		}
-		if v, ok := mv["valid"]; ok {
-			app.Valid = v.(bool)
-		}
-		if v, ok := mv["apis"]; ok {
-			for _, api := range v.([]any) {
-				app.Apis = append(app.Apis, api.(string))
-			}
-		}
-
-		if app.Key == "" || app.Secret == "" {
-			continue
-		}
-		loaded[app.Key] = app
-	}
-
-	confApps = loaded
-}
-
-// 运行时设置第三方应用列表，供业务方从 DB/Redis 加载后回填
-func SetApps(apps []misc.AppInfo) {
-	loaded := make(map[string]misc.AppInfo, len(apps))
-	for _, app := range apps {
-		if app.Key == "" || app.Secret == "" {
-			continue
-		}
-		loaded[app.Key] = app
-	}
-	confApps = loaded
 }
 
 // 第三方调用认证中间件。
@@ -203,7 +147,7 @@ func (a *apiAuth) AuthMiddleware(c *gin.Context) {
 	}
 
 	//查询第三方密钥
-	app, ok := a.loadApp(c, appKey)
+	app, ok := a.AppFunc(c, appKey)
 	if !ok || !app.Valid {
 		a.fail(c, "无效的 ApiKey")
 		return
@@ -302,14 +246,6 @@ func (a *apiAuth) GetCurApp(c *gin.Context) misc.AppInfo {
 func (a *apiAuth) fail(c *gin.Context, msg string) {
 	br.Brs.Okc(c, a.FailCode, msg)
 	c.Abort()
-}
-
-func (a *apiAuth) loadApp(c *gin.Context, appKey string) (misc.AppInfo, bool) {
-	if a.Apps != nil {
-		return a.Apps(c, appKey)
-	}
-	app, ok := confApps[appKey]
-	return app, ok
 }
 
 // 读取请求体并还原，保证后续 handler 还能正常读取
