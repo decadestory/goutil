@@ -6,8 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -113,10 +111,11 @@ func init() {
 //	X-Nonce     随机串，窗口内不可重复
 //	X-Sign      hex(HMAC-SHA256(AppSecret, 规范化串))
 //
-// 规范化串共 6 行，以 \n 连接：
+// 规范化串共 5 行，以 \n 连接：
 //
-//	METHOD\nPATH\nSORTED_QUERY\nSHA256_HEX(BODY)\nTIMESTAMP\nNONCE
+//	METHOD\nPATH\nSHA256_HEX(BODY)\nTIMESTAMP\nNONCE
 //
+// 注意 query 不参与签名，带业务参数的请求请一律用 POST body 传递。
 // 各语言签名实现见 auth/api_auth.md
 func (a *apiAuth) AuthMiddleware(c *gin.Context) {
 
@@ -166,7 +165,7 @@ func (a *apiAuth) AuthMiddleware(c *gin.Context) {
 
 	//验签，用 hmac.Equal 做等长常量时间比较，避免时序攻击
 	expect := Sign(app.Secret, c.Request.Method, c.Request.URL.EscapedPath(),
-		c.Request.URL.Query(), body, timestamp, nonce)
+		body, timestamp, nonce)
 	if !hmac.Equal([]byte(expect), []byte(strings.ToLower(sign))) {
 		a.fail(c, "签名验证失败")
 		return
@@ -192,47 +191,22 @@ func (a *apiAuth) AuthMiddleware(c *gin.Context) {
 }
 
 // 生成签名，Go 侧调用第三方接口时可直接复用
-func Sign(appSecret, method, path string, query url.Values, body []byte, timestamp, nonce string) string {
+func Sign(appSecret, method, path string, body []byte, timestamp, nonce string) string {
 	mac := hmac.New(sha256.New, []byte(appSecret))
-	mac.Write([]byte(BuildCanonical(method, path, query, body, timestamp, nonce)))
+	mac.Write([]byte(BuildCanonical(method, path, body, timestamp, nonce)))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // 拼接待签名的规范化串，各语言实现必须与此完全一致
-func BuildCanonical(method, path string, query url.Values, body []byte, timestamp, nonce string) string {
+func BuildCanonical(method, path string, body []byte, timestamp, nonce string) string {
 	bodyHash := sha256.Sum256(body)
 	return strings.Join([]string{
 		strings.ToUpper(method),
 		path,
-		CanonicalQuery(query),
 		hex.EncodeToString(bodyHash[:]),
 		timestamp,
 		nonce,
 	}, "\n")
-}
-
-// 规范化 query，按 key 升序、同 key 的值升序，值使用解码后的原文（不做转义）
-func CanonicalQuery(query url.Values) string {
-	if len(query) == 0 {
-		return ""
-	}
-
-	keys := make([]string, 0, len(query))
-	for k := range query {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	parts := make([]string, 0, len(query))
-	for _, k := range keys {
-		vals := query[k]
-		sort.Strings(vals)
-		for _, v := range vals {
-			parts = append(parts, k+"="+v)
-		}
-	}
-
-	return strings.Join(parts, "&")
 }
 
 func (a *apiAuth) GetCurApp(c *gin.Context) misc.AppInfo {

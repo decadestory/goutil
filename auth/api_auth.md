@@ -17,43 +17,34 @@
 
 ### 2.1 规范化串
 
-先拼出 6 行文本，用换行符 `\n` 连接：
+先拼出 5 行文本，用换行符 `\n` 连接：
 
 ```
-METHOD\nPATH\nQUERY\nSHA256_HEX(BODY)\nTIMESTAMP\nNONCE
+METHOD\nPATH\nSHA256_HEX(BODY)\nTIMESTAMP\nNONCE
 ```
 
 | 位置 | 取值 |
 | --- | --- |
 | `METHOD` | HTTP 方法，**大写**，如 `POST` |
 | `PATH` | URL 路径，不含 query，如 `/v1/order` |
-| `QUERY` | 见 2.2 |
 | `SHA256_HEX(BODY)` | 请求体原始字节的 SHA-256，hex 小写；无请求体时为**空串**的哈希 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | `TIMESTAMP` | 与请求头 `X-Timestamp` **完全一致**的原始字符串 |
 | `NONCE` | 与请求头 `X-Nonce` 完全一致的原始字符串 |
 
-### 2.2 QUERY 的规范化
+> **query 不参与签名。** 带参数的请求请一律把参数放进 POST body，不要用 URL query 传业务参数 —— URL 上携带的参数不受签名保护，可被中间人篡改，服务端也不会校验。接口如有 GET 读写语义，请改用 POST。
 
-- 按参数名**升序**排列；
-- 同名多值的参数，值也**升序**排列，逐个输出为 `key=value`；
-- 多组之间用 `&` 连接；
-- **值使用 URL 解码后的原文，不做任何转义**（空格就是空格，不是 `%20` 也不是 `+`）；
-- 无参数时该行为空串。
-
-`?b=2&a=1` 与 `?a=1&b=2` 规范化后都是 `a=1&b=2`，因此**客户端拼接参数顺序不影响验签**。
-
-### 2.3 计算签名
+### 2.2 计算签名
 
 ```
 sign = hex_lower( HMAC_SHA256(key = AppSecret, data = 规范化串) )
 ```
 
-### 2.4 完整示例
+### 2.3 完整示例
 
 请求：
 
 ```
-POST /v1/order?a=1&b=2 HTTP/1.1
+POST /v1/order HTTP/1.1
 X-Api-Key: ak_demo
 X-Timestamp: 1700000000
 X-Nonce: abc123
@@ -66,7 +57,6 @@ X-Nonce: abc123
 ```
 POST
 /v1/order
-a=1&b=2
 379214f2718333da854418b2ced7435430af05f9082d793abd6b7cd9159cdb75
 1700000000
 abc123
@@ -75,7 +65,7 @@ abc123
 AppSecret 为 `sk_test_secret` 时：
 
 ```
-X-Sign: db519254e9d97b874f855138f6cd3c790f5054553a8d7b24b112500748d83fb9
+X-Sign: a37784200ca7ea973830ba269d9141da5ec7f9623c202f7700634ed59e635611
 ```
 
 该向量已用 Python 标准库与 openssl 双向核对，可直接作为各语言自测用例。
@@ -89,7 +79,7 @@ X-Sign: db519254e9d97b874f855138f6cd3c790f5054553a8d7b24b112500748d83fb9
 ```go
 import "github.com/decadestory/goutil/auth"
 
-sign := auth.Sign(secret, "POST", "/v1/order", query, body, ts, nonce)
+sign := auth.Sign(secret, "POST", "/v1/order", body, ts, nonce)
 ```
 
 ### Python
@@ -98,21 +88,10 @@ sign := auth.Sign(secret, "POST", "/v1/order", query, body, ts, nonce)
 import hashlib, hmac, time, uuid
 
 
-def canonical_query(params):
-    """params: dict[str, str 或 list[str]]"""
-    parts = []
-    for k in sorted(params):
-        vals = params[k] if isinstance(params[k], list) else [params[k]]
-        for v in sorted(vals):
-            parts.append("%s=%s" % (k, v))
-    return "&".join(parts)
-
-
-def sign(secret, method, path, params, body, ts, nonce):
+def sign(secret, method, path, body, ts, nonce):
     canonical = "\n".join([
         method.upper(),
         path,
-        canonical_query(params),
         hashlib.sha256(body).hexdigest(),
         ts,
         nonce,
@@ -123,7 +102,7 @@ def sign(secret, method, path, params, body, ts, nonce):
 ts = str(int(time.time()))
 nonce = uuid.uuid4().hex
 body = b'{"orderId":"123"}'
-sign_value = sign("sk_test_secret", "POST", "/v1/order", {"a": "1", "b": "2"}, body, ts, nonce)
+sign_value = sign("sk_test_secret", "POST", "/v1/order", body, ts, nonce)
 ```
 
 ### JavaScript / Node.js
@@ -131,18 +110,9 @@ sign_value = sign("sk_test_secret", "POST", "/v1/order", {"a": "1", "b": "2"}, b
 ```js
 const crypto = require('crypto');
 
-function canonicalQuery(params) {
-  const out = [];
-  for (const k of Object.keys(params).sort()) {
-    const vals = Array.isArray(params[k]) ? params[k] : [params[k]];
-    for (const v of vals.slice().sort()) out.push(`${k}=${v}`);
-  }
-  return out.join('&');
-}
-
-function sign(secret, method, path, params, body, ts, nonce) {
+function sign(secret, method, path, body, ts, nonce) {
   const bodyHash = crypto.createHash('sha256').update(body).digest('hex');
-  const canonical = [method.toUpperCase(), path, canonicalQuery(params), bodyHash, ts, nonce].join('\n');
+  const canonical = [method.toUpperCase(), path, bodyHash, ts, nonce].join('\n');
   return crypto.createHmac('sha256', secret).update(canonical).digest('hex');
 }
 ```
@@ -168,27 +138,11 @@ public class ApiSign {
         return sb.toString();
     }
 
-    private static String canonicalQuery(Map<String, List<String>> params) {
-        List<String> keys = new ArrayList<>(params.keySet());
-        Collections.sort(keys);
-
-        List<String> parts = new ArrayList<>();
-        for (String k : keys) {
-            List<String> vals = new ArrayList<>(params.get(k));
-            Collections.sort(vals);
-            for (String v : vals) {
-                parts.add(k + "=" + v);
-            }
-        }
-        return String.join("&", parts);
-    }
-
     public static String sign(String secret, String method, String path,
-                             Map<String, List<String>> params, byte[] body,
-                             String ts, String nonce) throws Exception {
+                             byte[] body, String ts, String nonce) throws Exception {
         String bodyHash = hex(MessageDigest.getInstance("SHA-256").digest(body));
         String canonical = String.join("\n",
-                method.toUpperCase(), path, canonicalQuery(params), bodyHash, ts, nonce);
+                method.toUpperCase(), path, bodyHash, ts, nonce);
 
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
@@ -201,25 +155,11 @@ public class ApiSign {
 
 ```php
 <?php
-function canonical_query(array $params): string {
-    ksort($params);
-    $parts = [];
-    foreach ($params as $k => $v) {
-        $vals = is_array($v) ? $v : [$v];
-        sort($vals);
-        foreach ($vals as $each) {
-            $parts[] = $k . '=' . $each;
-        }
-    }
-    return implode('&', $parts);
-}
-
 function api_sign(string $secret, string $method, string $path,
-                  array $params, string $body, string $ts, string $nonce): string {
+                  string $body, string $ts, string $nonce): string {
     $canonical = implode("\n", [
         strtoupper($method),
         $path,
-        canonical_query($params),
         hash('sha256', $body),
         $ts,
         $nonce,
@@ -315,8 +255,8 @@ app := auth.AuthApis.GetCurApp(c)
 
 ## 六、常见坑
 
-1. **query 不要二次转义**。规则要求解码后的原文，`?q=%E4%B8%AD` 应参与签名的值是 `中`。若用现成的 URL 编码函数拼串，注意空格：`%20` 与 `+` 解码后都是空格，三种写法结果一致。
-2. **无参数时不要拼 `?`**。`/v1/order` 与 `/v1/order?` 的 `PATH` 相同、`QUERY` 都为空串，但别让中间件把空 query 当成 `"?"`。
+1. **不要在 URL 上带业务参数**。query 不参与签名，带上也不被校验，等于把参数暴露在无保护的状态下。所有参数走 POST body。
+2. **`PATH` 不含 query**。即使请求带了 `?a=1`，参与签名的 `PATH` 也只是 `/v1/order`。
 3. **body 用原始字节**，不要重新序列化 JSON 后再算哈希（键顺序、空格、转义都会变）。
 4. **GET 的 body** 传空字节数组，不要传 `null`。
 5. **时间戳、nonce 头与参与签名的值必须逐字符一致**，不要做 trim 或格式化。
