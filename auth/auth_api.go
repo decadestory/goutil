@@ -181,13 +181,41 @@ func (a *apiAuth) AuthMiddleware(c *gin.Context) {
 	}
 
 	//校验接口访问范围
-	if len(app.Apis) > 0 && !misc.IsItemLike(app.Apis, c.Request.URL.Path) {
+	if len(app.Apis) > 0 && !allowApi(app.Apis, c) {
 		a.fail(c, "无权访问该接口")
 		return
 	}
 
 	//存储在请求中
 	c.Set("curApp", app)
+}
+
+// 判断当前请求是否在应用允许的接口范围内。
+// 路径精确匹配，支持结尾 * 做前缀匹配，如 /api/order/*；单个 * 表示不限制。
+// Method 为空或 * 表示不限制方法，否则按请求方法校验（忽略大小写）。
+func allowApi(apis []misc.ApiInfoItem, c *gin.Context) bool {
+	path := c.Request.URL.Path
+	for _, api := range apis {
+		if api.Path == "" {
+			continue
+		}
+		if api.Method != "" && api.Method != "*" && !strings.EqualFold(api.Method, c.Request.Method) {
+			continue
+		}
+		if api.Path == "*" {
+			return true
+		}
+		if prefix, ok := strings.CutSuffix(api.Path, "*"); ok {
+			if strings.HasPrefix(path, prefix) {
+				return true
+			}
+			continue
+		}
+		if api.Path == path {
+			return true
+		}
+	}
+	return false
 }
 
 // 生成签名，Go 侧调用第三方接口时可直接复用

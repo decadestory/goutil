@@ -68,5 +68,18 @@ type AppInfo struct {
 	// 是否启用，可在线吊销
 	Valid bool `json:"valid"`
 	// 允许访问的接口路径，为空表示不限制
-	Apis []string `json:"apis"`
+	Apis []ApiInfoItem `json:"apis"`
+}
+
+type ApiInfoItem struct {
+	// 接口名称
+	Name string `json:"name"`
+	// 接口编码（唯一）
+	Code string `json:"code"`
+	// 请求方法
+	Method string `json:"method"`
+	// 接口路径
+	Path string `json:"path"`
+	// 单次调用费用（分）
+	Fee int64 `json:"fee"`
 }
